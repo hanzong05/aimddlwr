@@ -4,7 +4,8 @@
   "scripts": {
     "start": "node server.js",
     "build": "echo 'No build step needed'",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+     "dev": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",
