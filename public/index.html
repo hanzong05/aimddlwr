@@ -3,153 +3,512 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Middleware Service</title>
+    <title>AI Middleware API Tester</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 2rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 3rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        h1 {
+            padding: 30px;
             text-align: center;
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
-        .subtitle {
-            text-align: center;
-            font-size: 1.2rem;
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
             opacity: 0.9;
-            margin-bottom: 2rem;
+            font-size: 1.1rem;
         }
-        .endpoints {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: 15px;
-            margin: 2rem 0;
+        
+        .content {
+            padding: 30px;
         }
-        .endpoint {
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 25px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 1rem;
-            margin: 0.5rem 0;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border-left: 4px solid #4CAF50;
+            gap: 10px;
         }
-        .method {
-            background: #4CAF50;
+        
+        .form-group {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 0.3rem 0.8rem;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 0.9rem;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin: 5px 5px 5px 0;
         }
-        .status {
-            text-align: center;
-            margin: 2rem 0;
-            padding: 1rem;
-            background: rgba(76, 175, 80, 0.2);
-            border-radius: 10px;
-            border: 1px solid rgba(76, 175, 80, 0.3);
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            opacity: 0.7;
-            font-size: 0.9rem;
+        
+        button:active {
+            transform: translateY(0);
         }
-        a {
-            color: #4CAF50;
-            text-decoration: none;
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
-        a:hover {
-            text-decoration: underline;
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            min-height: 50px;
+            word-break: break-all;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #99d3ff;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .url-display {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #0066cc;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+        
+        .quick-fill {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .quick-fill button {
+            background: #2196f3;
+            font-size: 12px;
+            padding: 8px 15px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+        
+        .status-online {
+            background: #4caf50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        }
+        
+        .status-offline {
+            background: #f44336;
+            box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
+        }
+        
+        .status-unknown {
+            background: #ff9800;
+            box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 AI Middleware Service</h1>
-        <p class="subtitle">Serverless API for AI chat and training</p>
+        <div class="header">
+            <h1>🤖 AI Middleware API Tester</h1>
+            <p>Test your deployed serverless API endpoints</p>
+        </div>
         
-        <div class="status">
-            <h3>✅ Service Status: Online</h3>
-            <p>All API endpoints are operational</p>
-        </div>
+        <div class="content">
+            <!-- API Configuration -->
+            <div class="test-section">
+                <h3>⚙️ API Configuration</h3>
+                <div class="form-group">
+                    <label for="baseUrl">API Base URL:</label>
+                    <input type="text" id="baseUrl" value="https://gptmddlwr-git-main-hanz-pillervas-projects.vercel.app" readonly>
+                </div>
+            </div>
 
-        <div class="endpoints">
-            <h3>📡 Available Endpoints</h3>
-            
-            <div class="endpoint">
-                <div>
-                    <strong>/api/health</strong>
-                    <br><small>Service health check</small>
-                </div>
-                <span class="method">GET</span>
+            <!-- Health Check -->
+            <div class="test-section">
+                <h3>🔍 Health Check <span id="healthStatus" class="status-indicator status-unknown"></span></h3>
+                <p>Verify your API is responding correctly</p>
+                <div class="url-display">GET /api/health</div>
+                <button onclick="testHealth()">🔄 Test Health</button>
+                <div id="healthResult" class="result info">Click "Test Health" to check API status...</div>
             </div>
-            
-            <div class="endpoint">
-                <div>
-                    <strong>/api/auth/register</strong>
-                    <br><small>User registration</small>
-                </div>
-                <span class="method">POST</span>
-            </div>
-            
-            <div class="endpoint">
-                <div>
-                    <strong>/api/auth/login</strong>
-                    <br><small>User authentication</small>
-                </div>
-                <span class="method">POST</span>
-            </div>
-            
-            <div class="endpoint">
-                <div>
-                    <strong>/api/ai/chat</strong>
-                    <br><small>AI chat conversations</small>
-                </div>
-                <span class="method">POST</span>
-            </div>
-        </div>
 
-        <div class="footer">
-            <p>
-                🚀 Powered by Vercel | 📊 Database: Supabase
-                <br>
-                <a href="/api/health">Check API Health</a>
-            </p>
+            <!-- User Registration -->
+            <div class="test-section">
+                <h3>👤 User Registration</h3>
+                <div class="url-display">POST /api/auth/register</div>
+                
+                <div class="quick-fill">
+                    <strong>Quick Fill:</strong>
+                    <button onclick="fillTestUser()">📝 Use Test User</button>
+                    <button onclick="fillRandomUser()">🎲 Generate Random User</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regEmail">Email:</label>
+                    <input type="email" id="regEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Password:</label>
+                    <input type="password" id="regPassword" placeholder="Enter a secure password">
+                </div>
+                <button onclick="testRegister()">➕ Register User</button>
+                <div id="registerResult" class="result"></div>
+            </div>
+
+            <!-- User Login -->
+            <div class="test-section">
+                <h3>🔐 User Login</h3>
+                <div class="url-display">POST /api/auth/login</div>
+                
+                <div class="form-group">
+                    <label for="loginEmail">Email:</label>
+                    <input type="email" id="loginEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password:</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+                <button onclick="testLogin()">🔑 Login</button>
+                <button onclick="copyRegCredentials()">📋 Copy from Registration</button>
+                <div id="loginResult" class="result"></div>
+            </div>
+
+            <!-- AI Chat -->
+            <div class="test-section">
+                <h3>🤖 AI Chat</h3>
+                <div class="url-display">POST /api/ai/chat</div>
+                
+                <div class="form-group">
+                    <label for="authToken">Authorization Token (from login):</label>
+                    <input type="text" id="authToken" placeholder="JWT token will appear here after successful login">
+                </div>
+                <div class="form-group">
+                    <label for="chatMessage">Message:</label>
+                    <textarea id="chatMessage" rows="3" placeholder="Hello! Can you help me with coding?"></textarea>
+                </div>
+                <div class="quick-fill">
+                    <strong>Quick Messages:</strong>
+                    <button onclick="setMessage('Hello! How are you?')">👋 Greeting</button>
+                    <button onclick="setMessage('Can you help me with Python programming?')">🐍 Coding Help</button>
+                    <button onclick="setMessage('Explain machine learning basics')">🤖 AI Question</button>
+                </div>
+                <button onclick="testChat()">💬 Send Message</button>
+                <div id="chatResult" class="result"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Test API health on page load
-        fetch('/api/health')
-            .then(response => response.json())
-            .then(data => {
-                console.log('API Health:', data);
-            })
-            .catch(error => {
-                console.error('API Health Check Failed:', error);
-                document.querySelector('.status h3').textContent = '❌ Service Status: Error';
-                document.querySelector('.status p').textContent = 'API health check failed';
+        let userCredentials = { email: '', password: '' };
+
+        // Utility functions
+        function showResult(elementId, type, message, data = null) {
+            const element = document.getElementById(elementId);
+            let className = type; // 'success', 'error', 'loading', 'info'
+            let html = `<div><strong>${message}</strong></div>`;
+            
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            element.className = `result ${className}`;
+            element.innerHTML = html;
+        }
+
+        function showLoading(elementId, message = 'Processing...') {
+            showResult(elementId, 'loading', `🔄 ${message}`);
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const url = `${baseUrl}${endpoint}`;
+            
+            console.log(`Making request to: ${url}`, options);
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
             });
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = { error: 'Invalid JSON response', responseText: await response.text() };
+            }
+
+            return { response, data, url };
+        }
+
+        // Test Functions
+        async function testHealth() {
+            showLoading('healthResult', 'Checking API health...');
+            const statusIndicator = document.getElementById('healthStatus');
+            
+            try {
+                const { response, data, url } = await makeRequest('/api/health');
+                
+                if (response.ok && data.status === 'healthy') {
+                    showResult('healthResult', 'success', '✅ API is healthy and responding!', data);
+                    statusIndicator.className = 'status-indicator status-online';
+                } else {
+                    showResult('healthResult', 'error', '❌ API health check failed', data);
+                    statusIndicator.className = 'status-indicator status-offline';
+                }
+            } catch (error) {
+                showResult('healthResult', 'error', `❌ Connection failed: ${error.message}`);
+                statusIndicator.className = 'status-indicator status-offline';
+            }
+        }
+
+        async function testRegister() {
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+
+            if (!email || !password) {
+                showResult('registerResult', 'error', '❌ Please enter both email and password');
+                return;
+            }
+
+            if (password.length < 6) {
+                showResult('registerResult', 'error', '❌ Password must be at least 6 characters');
+                return;
+            }
+
+            showLoading('registerResult', 'Creating user account...');
+
+            try {
+                const { response, data } = await makeRequest('/api/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok && data.success) {
+                    showResult('registerResult', 'success', '✅ User registered successfully!', data);
+                    
+                    // Store credentials for easy login
+                    userCredentials = { email, password };
+                    
+                    // Auto-fill login form
+                    document.getElementById('loginEmail').value = email;
+                    document.getElementById('loginPassword').value = password;
+                    
+                } else {
+                    showResult('registerResult', 'error', '❌ Registration failed', data);
+                }
+            } catch (error) {
+                showResult('registerResult', 'error', `❌ Request failed: ${error.message}`);
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!email || !password) {
+                showResult('loginResult', 'error', '❌ Please enter both email and password');
+                return;
+            }
+
+            showLoading('loginResult', 'Authenticating user...');
+
+            try {
+                const { response, data } = await makeRequest('/api/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok && data.success && data.token) {
+                    showResult('loginResult', 'success', '✅ Login successful!', data);
+                    
+                    // Auto-fill auth token for chat
+                    document.getElementById('authToken').value = data.token;
+                    
+                } else {
+                    showResult('loginResult', 'error', '❌ Login failed', data);
+                }
+            } catch (error) {
+                showResult('loginResult', 'error', `❌ Request failed: ${error.message}`);
+            }
+        }
+
+        async function testChat() {
+            const token = document.getElementById('authToken').value.trim();
+            const message = document.getElementById('chatMessage').value.trim();
+
+            if (!token) {
+                showResult('chatResult', 'error', '❌ Please login first to get an auth token');
+                return;
+            }
+
+            if (!message) {
+                showResult('chatResult', 'error', '❌ Please enter a message');
+                return;
+            }
+
+            showLoading('chatResult', 'Sending message to AI...');
+
+            try {
+                const { response, data } = await makeRequest('/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (response.ok && data.success) {
+                    showResult('chatResult', 'success', '✅ AI response received!', data);
+                } else {
+                    showResult('chatResult', 'error', '❌ Chat request failed', data);
+                }
+            } catch (error) {
+                showResult('chatResult', 'error', `❌ Request failed: ${error.message}`);
+            }
+        }
+
+        // Helper Functions
+        function fillTestUser() {
+            document.getElementById('regEmail').value = 'test@example.com';
+            document.getElementById('regPassword').value = 'password123';
+        }
+
+        function fillRandomUser() {
+            const randomId = Math.floor(Math.random() * 10000);
+            document.getElementById('regEmail').value = `user${randomId}@example.com`;
+            document.getElementById('regPassword').value = 'password123';
+        }
+
+        function copyRegCredentials() {
+            const regEmail = document.getElementById('regEmail').value;
+            const regPassword = document.getElementById('regPassword').value;
+            
+            if (regEmail && regPassword) {
+                document.getElementById('loginEmail').value = regEmail;
+                document.getElementById('loginPassword').value = regPassword;
+                showResult('loginResult', 'info', '📋 Credentials copied from registration form');
+            } else {
+                showResult('loginResult', 'error', '❌ No registration credentials to copy');
+            }
+        }
+
+        function setMessage(msg) {
+            document.getElementById('chatMessage').value = msg;
+        }
+
+        // Auto-test health on page load
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 1000);
+        });
     </script>
 </body>
 </html>
