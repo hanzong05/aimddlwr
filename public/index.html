@@ -3,512 +3,419 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Middleware API Tester</title>
+    <title>AI Training Test</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
+            background: #f5f5f5;
         }
         
         .container {
-            max-width: 1000px;
-            margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            margin-bottom: 30px;
         }
         
         .header h1 {
-            font-size: 2.5rem;
+            color: #333;
             margin-bottom: 10px;
         }
         
         .header p {
-            opacity: 0.9;
-            font-size: 1.1rem;
-        }
-        
-        .content {
-            padding: 30px;
-        }
-        
-        .test-section {
-            margin: 30px 0;
-            padding: 25px;
-            border: 2px solid #f0f0f0;
-            border-radius: 12px;
-            background: #fafafa;
-        }
-        
-        .test-section h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .form-group {
-            margin: 15px 0;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-        
-        input, textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-        
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            color: #666;
         }
         
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 15px 30px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            margin: 5px 5px 5px 0;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease;
         }
         
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(0);
         }
         
         button:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
-            box-shadow: none;
         }
         
-        .result {
-            margin-top: 20px;
-            padding: 15px;
+        #output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
             border-radius: 8px;
+            padding: 20px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
-            min-height: 50px;
-            word-break: break-all;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
         }
         
-        .success {
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #99d3ff;
+        }
+        
+        .status.success {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
         
-        .error {
+        .status.error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
         
         .loading {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #99d3ff;
-        }
-        
-        pre {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            margin-top: 10px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .url-display {
-            background: #e8f4f8;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #0066cc;
-            margin-bottom: 15px;
-            word-break: break-all;
-        }
-        
-        .quick-fill {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-        
-        .quick-fill button {
-            background: #2196f3;
-            font-size: 12px;
-            padding: 8px 15px;
-        }
-        
-        .status-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
             border-radius: 50%;
-            margin-left: 10px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
         }
         
-        .status-online {
-            background: #4caf50;
-            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
-        }
-        
-        .status-offline {
-            background: #f44336;
-            box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
-        }
-        
-        .status-unknown {
-            background: #ff9800;
-            box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 AI Middleware API Tester</h1>
-            <p>Test your deployed serverless API endpoints</p>
+            <h1>🤖 AI Training Test</h1>
+            <p>Test your AI middleware training system end-to-end</p>
         </div>
         
-        <div class="content">
-            <!-- API Configuration -->
-            <div class="test-section">
-                <h3>⚙️ API Configuration</h3>
-                <div class="form-group">
-                    <label for="baseUrl">API Base URL:</label>
-                    <input type="text" id="baseUrl" value="https://gptmddlwr-git-main-hanz-pillervas-projects.vercel.app" readonly>
-                </div>
-            </div>
-
-            <!-- Health Check -->
-            <div class="test-section">
-                <h3>🔍 Health Check <span id="healthStatus" class="status-indicator status-unknown"></span></h3>
-                <p>Verify your API is responding correctly</p>
-                <div class="url-display">GET /api/health</div>
-                <button onclick="testHealth()">🔄 Test Health</button>
-                <div id="healthResult" class="result info">Click "Test Health" to check API status...</div>
-            </div>
-
-            <!-- User Registration -->
-            <div class="test-section">
-                <h3>👤 User Registration</h3>
-                <div class="url-display">POST /api/auth/register</div>
-                
-                <div class="quick-fill">
-                    <strong>Quick Fill:</strong>
-                    <button onclick="fillTestUser()">📝 Use Test User</button>
-                    <button onclick="fillRandomUser()">🎲 Generate Random User</button>
-                </div>
-                
-                <div class="form-group">
-                    <label for="regEmail">Email:</label>
-                    <input type="email" id="regEmail" placeholder="user@example.com">
-                </div>
-                <div class="form-group">
-                    <label for="regPassword">Password:</label>
-                    <input type="password" id="regPassword" placeholder="Enter a secure password">
-                </div>
-                <button onclick="testRegister()">➕ Register User</button>
-                <div id="registerResult" class="result"></div>
-            </div>
-
-            <!-- User Login -->
-            <div class="test-section">
-                <h3>🔐 User Login</h3>
-                <div class="url-display">POST /api/auth/login</div>
-                
-                <div class="form-group">
-                    <label for="loginEmail">Email:</label>
-                    <input type="email" id="loginEmail" placeholder="user@example.com">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password:</label>
-                    <input type="password" id="loginPassword" placeholder="Enter password">
-                </div>
-                <button onclick="testLogin()">🔑 Login</button>
-                <button onclick="copyRegCredentials()">📋 Copy from Registration</button>
-                <div id="loginResult" class="result"></div>
-            </div>
-
-            <!-- AI Chat -->
-            <div class="test-section">
-                <h3>🤖 AI Chat</h3>
-                <div class="url-display">POST /api/ai/chat</div>
-                
-                <div class="form-group">
-                    <label for="authToken">Authorization Token (from login):</label>
-                    <input type="text" id="authToken" placeholder="JWT token will appear here after successful login">
-                </div>
-                <div class="form-group">
-                    <label for="chatMessage">Message:</label>
-                    <textarea id="chatMessage" rows="3" placeholder="Hello! Can you help me with coding?"></textarea>
-                </div>
-                <div class="quick-fill">
-                    <strong>Quick Messages:</strong>
-                    <button onclick="setMessage('Hello! How are you?')">👋 Greeting</button>
-                    <button onclick="setMessage('Can you help me with Python programming?')">🐍 Coding Help</button>
-                    <button onclick="setMessage('Explain machine learning basics')">🤖 AI Question</button>
-                </div>
-                <button onclick="testChat()">💬 Send Message</button>
-                <div id="chatResult" class="result"></div>
-            </div>
+        <div class="status info">
+            <strong>🔍 This test will:</strong><br>
+            • Create a test user account<br>
+            • Add training data through chat<br>
+            • Add high-quality training examples<br>
+            • Start model training<br>
+            • Monitor training progress<br>
+            • Activate the trained model<br>
+            • Test AI responses with the trained model
         </div>
+        
+        <button id="startTest" onclick="runTrainingTest()">
+            🚀 Start Training Test
+        </button>
+        
+        <div id="status"></div>
+        <div id="output"></div>
     </div>
 
     <script>
-        let userCredentials = { email: '', password: '' };
+        const API_BASE = 'https://gptmddlwr-git-main-hanz-pillervas-projects.vercel.app';
+        let isRunning = false;
 
-        // Utility functions
-        function showResult(elementId, type, message, data = null) {
-            const element = document.getElementById(elementId);
-            let className = type; // 'success', 'error', 'loading', 'info'
-            let html = `<div><strong>${message}</strong></div>`;
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.innerHTML = type === 'loading' 
+                ? `<span class="loading"></span>${message}` 
+                : message;
+        }
+
+        async function runTrainingTest() {
+            if (isRunning) return;
             
-            if (data) {
-                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            isRunning = true;
+            const button = document.getElementById('startTest');
+            button.disabled = true;
+            button.textContent = 'Running Test...';
+            
+            document.getElementById('output').textContent = '';
+            
+            try {
+                await testTrainingFlow();
+                setStatus('🎉 Training test completed successfully!', 'success');
+            } catch (error) {
+                console.error('Test failed:', error);
+                setStatus(`❌ Test failed: ${error.message}`, 'error');
+                log(`❌ ERROR: ${error.message}`);
+            } finally {
+                isRunning = false;
+                button.disabled = false;
+                button.textContent = '🚀 Start Training Test';
             }
-            
-            element.className = `result ${className}`;
-            element.innerHTML = html;
         }
 
-        function showLoading(elementId, message = 'Processing...') {
-            showResult(elementId, 'loading', `🔄 ${message}`);
-        }
+        async function testTrainingFlow() {
+            log('🚀 Starting AI Training Flow Test...');
+            setStatus('Creating test user...', 'loading');
 
-        async function makeRequest(endpoint, options = {}) {
-            const baseUrl = document.getElementById('baseUrl').value;
-            const url = `${baseUrl}${endpoint}`;
-            
-            console.log(`Making request to: ${url}`, options);
-            
-            const response = await fetch(url, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
+            // 1. Register a test user
+            log('1. Registering test user...');
+            const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: `test${Date.now()}@example.com`,
+                    password: 'password123'
+                })
             });
-
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                data = { error: 'Invalid JSON response', responseText: await response.text() };
-            }
-
-            return { response, data, url };
-        }
-
-        // Test Functions
-        async function testHealth() {
-            showLoading('healthResult', 'Checking API health...');
-            const statusIndicator = document.getElementById('healthStatus');
             
-            try {
-                const { response, data, url } = await makeRequest('/api/health');
-                
-                if (response.ok && data.status === 'healthy') {
-                    showResult('healthResult', 'success', '✅ API is healthy and responding!', data);
-                    statusIndicator.className = 'status-indicator status-online';
-                } else {
-                    showResult('healthResult', 'error', '❌ API health check failed', data);
-                    statusIndicator.className = 'status-indicator status-offline';
-                }
-            } catch (error) {
-                showResult('healthResult', 'error', `❌ Connection failed: ${error.message}`);
-                statusIndicator.className = 'status-indicator status-offline';
+            if (!registerResponse.ok) {
+                throw new Error(`Registration failed: ${registerResponse.status}`);
             }
-        }
+            
+            const { token } = await registerResponse.json();
+            log('✅ User registered successfully');
 
-        async function testRegister() {
-            const email = document.getElementById('regEmail').value.trim();
-            const password = document.getElementById('regPassword').value.trim();
+            // 2. Add some training data by chatting
+            setStatus('Adding training data through chat...', 'loading');
+            log('\n2. Adding training data through chat...');
+            const messages = [
+                'Hello, how are you?',
+                'Can you help me with JavaScript?',
+                'What is machine learning?',
+                'How do I deploy to Vercel?',
+                'Explain React hooks'
+            ];
 
-            if (!email || !password) {
-                showResult('registerResult', 'error', '❌ Please enter both email and password');
-                return;
-            }
-
-            if (password.length < 6) {
-                showResult('registerResult', 'error', '❌ Password must be at least 6 characters');
-                return;
-            }
-
-            showLoading('registerResult', 'Creating user account...');
-
-            try {
-                const { response, data } = await makeRequest('/api/auth/register', {
-                    method: 'POST',
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (response.ok && data.success) {
-                    showResult('registerResult', 'success', '✅ User registered successfully!', data);
-                    
-                    // Store credentials for easy login
-                    userCredentials = { email, password };
-                    
-                    // Auto-fill login form
-                    document.getElementById('loginEmail').value = email;
-                    document.getElementById('loginPassword').value = password;
-                    
-                } else {
-                    showResult('registerResult', 'error', '❌ Registration failed', data);
-                }
-            } catch (error) {
-                showResult('registerResult', 'error', `❌ Request failed: ${error.message}`);
-            }
-        }
-
-        async function testLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
-
-            if (!email || !password) {
-                showResult('loginResult', 'error', '❌ Please enter both email and password');
-                return;
-            }
-
-            showLoading('loginResult', 'Authenticating user...');
-
-            try {
-                const { response, data } = await makeRequest('/api/auth/login', {
-                    method: 'POST',
-                    body: JSON.stringify({ email, password })
-                });
-
-                if (response.ok && data.success && data.token) {
-                    showResult('loginResult', 'success', '✅ Login successful!', data);
-                    
-                    // Auto-fill auth token for chat
-                    document.getElementById('authToken').value = data.token;
-                    
-                } else {
-                    showResult('loginResult', 'error', '❌ Login failed', data);
-                }
-            } catch (error) {
-                showResult('loginResult', 'error', `❌ Request failed: ${error.message}`);
-            }
-        }
-
-        async function testChat() {
-            const token = document.getElementById('authToken').value.trim();
-            const message = document.getElementById('chatMessage').value.trim();
-
-            if (!token) {
-                showResult('chatResult', 'error', '❌ Please login first to get an auth token');
-                return;
-            }
-
-            if (!message) {
-                showResult('chatResult', 'error', '❌ Please enter a message');
-                return;
-            }
-
-            showLoading('chatResult', 'Sending message to AI...');
-
-            try {
-                const { response, data } = await makeRequest('/api/ai/chat', {
+            for (const message of messages) {
+                const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
                     method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ message })
                 });
-
-                if (response.ok && data.success) {
-                    showResult('chatResult', 'success', '✅ AI response received!', data);
+                
+                if (chatResponse.ok) {
+                    log(`📝 Added: "${message}"`);
                 } else {
-                    showResult('chatResult', 'error', '❌ Chat request failed', data);
+                    log(`❌ Failed to add: "${message}"`);
                 }
-            } catch (error) {
-                showResult('chatResult', 'error', `❌ Request failed: ${error.message}`);
             }
-        }
 
-        // Helper Functions
-        function fillTestUser() {
-            document.getElementById('regEmail').value = 'test@example.com';
-            document.getElementById('regPassword').value = 'password123';
-        }
+            // 3. Add high-quality training examples manually
+            setStatus('Adding high-quality training examples...', 'loading');
+            log('\n3. Adding high-quality training examples...');
+            const trainingExamples = [
+                {
+                    input: 'How do I use React useState?',
+                    output: 'useState is a React Hook that lets you add state to functional components. Usage: const [count, setCount] = useState(0);',
+                    quality_score: 5,
+                    category: 'programming'
+                },
+                {
+                    input: 'What is Next.js?',
+                    output: 'Next.js is a React framework that provides server-side rendering, static site generation, and many other production-ready features.',
+                    quality_score: 5,
+                    category: 'programming'
+                },
+                {
+                    input: 'How to deploy on Vercel?',
+                    output: 'To deploy on Vercel: 1) Install Vercel CLI, 2) Run "vercel" in your project directory, 3) Follow the prompts to deploy.',
+                    quality_score: 4,
+                    category: 'deployment'
+                }
+            ];
 
-        function fillRandomUser() {
-            const randomId = Math.floor(Math.random() * 10000);
-            document.getElementById('regEmail').value = `user${randomId}@example.com`;
-            document.getElementById('regPassword').value = 'password123';
-        }
+            for (const example of trainingExamples) {
+                const addResponse = await fetch(`${API_BASE}/api/data/training`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(example)
+                });
+                
+                if (addResponse.ok) {
+                    log(`📚 Added training example: "${example.input}"`);
+                } else {
+                    log(`❌ Failed to add training example: "${example.input}"`);
+                }
+            }
 
-        function copyRegCredentials() {
-            const regEmail = document.getElementById('regEmail').value;
-            const regPassword = document.getElementById('regPassword').value;
+            // 4. Check training data
+            setStatus('Checking training data...', 'loading');
+            log('\n4. Checking training data...');
+            const trainingDataResponse = await fetch(`${API_BASE}/api/data/training`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             
-            if (regEmail && regPassword) {
-                document.getElementById('loginEmail').value = regEmail;
-                document.getElementById('loginPassword').value = regPassword;
-                showResult('loginResult', 'info', '📋 Credentials copied from registration form');
+            if (trainingDataResponse.ok) {
+                const trainingData = await trainingDataResponse.json();
+                log(`📊 Total training examples: ${trainingData.statistics.total}`);
+                log(`🏆 High quality examples: ${trainingData.statistics.high_quality}`);
             } else {
-                showResult('loginResult', 'error', '❌ No registration credentials to copy');
+                log('❌ Failed to fetch training data');
             }
-        }
 
-        function setMessage(msg) {
-            document.getElementById('chatMessage').value = msg;
-        }
+            // 5. Start training
+            setStatus('Starting model training...', 'loading');
+            log('\n5. Starting model training...');
+            const trainingResponse = await fetch(`${API_BASE}/api/ai/train`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    epochs: 3,
+                    learningRate: 0.001,
+                    modelName: 'Test Custom Model'
+                })
+            });
+            
+            const trainingResult = await trainingResponse.json();
+            
+            if (trainingResult.success) {
+                log(`🚀 Training started! Job ID: ${trainingResult.jobId}`);
+                log(`📈 Training ${trainingResult.trainingDataCount} examples`);
 
-        // Auto-test health on page load
-        window.addEventListener('load', () => {
-            setTimeout(testHealth, 1000);
-        });
+                // 6. Monitor training progress
+                setStatus('Monitoring training progress...', 'loading');
+                log('\n6. Monitoring training progress...');
+                const jobId = trainingResult.jobId;
+                let isComplete = false;
+                let attempts = 0;
+                const maxAttempts = 20;
+
+                while (!isComplete && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    
+                    const statusResponse = await fetch(`${API_BASE}/api/ai/train?jobId=${jobId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const status = await statusResponse.json();
+                    
+                    log(`📊 Status: ${status.status} | Progress: ${status.progress_percentage?.toFixed(1)}% | Epoch: ${status.current_epoch || 0}`);
+                    
+                    if (status.status === 'completed') {
+                        isComplete = true;
+                        log('🎉 Training completed successfully!');
+                    } else if (status.status === 'failed') {
+                        throw new Error(`Training failed: ${status.error_message}`);
+                    }
+                    
+                    attempts++;
+                }
+
+                if (!isComplete) {
+                    log('⏰ Training is still in progress (check later)');
+                }
+
+                // 7. Check models
+                setStatus('Checking available models...', 'loading');
+                log('\n7. Checking available models...');
+                const modelsResponse = await fetch(`${API_BASE}/api/ai/models`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (modelsResponse.ok) {
+                    const models = await modelsResponse.json();
+                    log(`🤖 Total models: ${models.length}`);
+                    models.forEach(model => {
+                        log(`  - ${model.name}: ${model.status} (Accuracy: ${(model.accuracy * 100).toFixed(1)}%)`);
+                    });
+
+                    // 8. Activate the trained model
+                    if (models.length > 0) {
+                        const latestModel = models[0];
+                        setStatus('Activating trained model...', 'loading');
+                        log(`\n8. Activating model: ${latestModel.name}...`);
+                        
+                        const activateResponse = await fetch(`${API_BASE}/api/ai/models`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ modelId: latestModel.id })
+                        });
+                        
+                        if (activateResponse.ok) {
+                            log('✅ Model activated successfully!');
+                        }
+                    }
+
+                    // 9. Test the trained model
+                    setStatus('Testing trained model responses...', 'loading');
+                    log('\n9. Testing responses with trained model...');
+                    const testMessages = [
+                        'How do I use React useState?',
+                        'What is Next.js?',
+                        'Hello there!',
+                        'Can you help me with coding?'
+                    ];
+
+                    for (const message of testMessages) {
+                        const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ message })
+                        });
+                        
+                        if (chatResponse.ok) {
+                            const chatResult = await chatResponse.json();
+                            log(`\n💬 You: ${message}`);
+                            log(`🤖 AI: ${chatResult.response}`);
+                        }
+                    }
+                }
+            } else {
+                throw new Error(`Training failed to start: ${trainingResult.error}`);
+            }
+
+            log('\n🎉 Training flow test completed successfully!');
+            log('\n📋 Summary:');
+            log('- Created user account');
+            log('- Added training examples');
+            log('- Trained a custom model');
+            log('- Activated the model');
+            log('- Tested AI responses with trained model');
+        }
     </script>
 </body>
 </html>
