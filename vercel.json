@@ -7,8 +7,36 @@
   },
   "rewrites": [
     {
-      "source": "/api/learning/(.*)",
-      "destination": "/api/learning?endpoint=$1"
+      "source": "/api/learning/analytics",
+      "destination": "/api/learning?endpoint=analytics"
+    },
+    {
+      "source": "/api/learning/patterns",
+      "destination": "/api/learning?endpoint=patterns"
+    },
+    {
+      "source": "/api/learning/feedback",
+      "destination": "/api/learning?endpoint=feedback"
+    },
+    {
+      "source": "/api/learning/health",
+      "destination": "/api/learning?endpoint=health"
+    },
+    {
+      "source": "/api/proxy/learning/analytics",
+      "destination": "/api/learning?endpoint=analytics"
+    },
+    {
+      "source": "/api/proxy/learning/patterns",
+      "destination": "/api/learning?endpoint=patterns"
+    },
+    {
+      "source": "/api/proxy/learning/feedback",
+      "destination": "/api/learning?endpoint=feedback"
+    },
+    {
+      "source": "/api/proxy/learning/health",
+      "destination": "/api/learning?endpoint=health"
     },
     {
       "source": "/api/(.*)",
