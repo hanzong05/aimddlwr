@@ -1,422 +1,422 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Training Test</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #666;
-        }
-        
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
-            margin-bottom: 20px;
-            transition: transform 0.2s ease;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-        }
-        
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        #output {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            max-height: 500px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-        
-        .status {
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-        
-        .status.info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #99d3ff;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 AI Training Test</h1>
-            <p>Test your AI middleware training system end-to-end</p>
-        </div>
-        
-        <div class="status info">
-            <strong>🔍 This test will:</strong><br>
-            • Create a test user account<br>
-            • Add training data through chat<br>
-            • Add high-quality training examples<br>
-            • Start model training<br>
-            • Monitor training progress<br>
-            • Activate the trained model<br>
-            • Test AI responses with the trained model
-        </div>
-        
-        <button id="startTest" onclick="runTrainingTest()">
-            🚀 Start Training Test
-        </button>
-        
-        <div id="status"></div>
-        <div id="output"></div>
-    </div>
-
-    <script>
-        const API_BASE = 'https://aimddlwr-git-main-hanz-pillervas-projects.vercel.app/';
-        let isRunning = false;
-
-        function log(message, type = 'info') {
-            const output = document.getElementById('output');
-            const timestamp = new Date().toLocaleTimeString();
-            output.textContent += `[${timestamp}] ${message}\n`;
-            output.scrollTop = output.scrollHeight;
-        }
-
-        function setStatus(message, type = 'info') {
-            const status = document.getElementById('status');
-            status.className = `status ${type}`;
-            status.innerHTML = type === 'loading' 
-                ? `<span class="loading"></span>${message}` 
-                : message;
-        }
-
-        async function runTrainingTest() {
-            if (isRunning) return;
-            
-            isRunning = true;
-            const button = document.getElementById('startTest');
-            button.disabled = true;
-            button.textContent = 'Running Test...';
-            
-            document.getElementById('output').textContent = '';
-            
-            try {
-                await testTrainingFlow();
-                setStatus('🎉 Training test completed successfully!', 'success');
-            } catch (error) {
-                console.error('Test failed:', error);
-                setStatus(`❌ Test failed: ${error.message}`, 'error');
-                log(`❌ ERROR: ${error.message}`);
-            } finally {
-                isRunning = false;
-                button.disabled = false;
-                button.textContent = '🚀 Start Training Test';
-            }
-        }
-
-        async function testTrainingFlow() {
-            log('🚀 Starting AI Training Flow Test...');
-            setStatus('Creating test user...', 'loading');
-
-            // 1. Register a test user
-            log('1. Registering test user...');
-            const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: `test${Date.now()}@example.com`,
-                    password: 'password123'
-                })
-            });
-            
-            if (!registerResponse.ok) {
-                throw new Error(`Registration failed: ${registerResponse.status}`);
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Training Test</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #f5f5f5;
             }
             
-            const { token } = await registerResponse.json();
-            log('✅ User registered successfully');
+            .container {
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            
+            .header h1 {
+                color: #333;
+                margin-bottom: 10px;
+            }
+            
+            .header p {
+                color: #666;
+            }
+            
+            button {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                width: 100%;
+                margin-bottom: 20px;
+                transition: transform 0.2s ease;
+            }
+            
+            button:hover {
+                transform: translateY(-2px);
+            }
+            
+            button:disabled {
+                background: #ccc;
+                cursor: not-allowed;
+                transform: none;
+            }
+            
+            #output {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 20px;
+                font-family: 'Courier New', monospace;
+                font-size: 14px;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                max-height: 500px;
+                overflow-y: auto;
+                margin-top: 20px;
+            }
+            
+            .status {
+                padding: 10px 15px;
+                border-radius: 6px;
+                margin-bottom: 20px;
+                font-weight: 500;
+            }
+            
+            .status.info {
+                background: #cce7ff;
+                color: #004085;
+                border: 1px solid #99d3ff;
+            }
+            
+            .status.success {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            
+            .status.error {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            
+            .loading {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 10px;
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🤖 AI Training Test</h1>
+                <p>Test your AI middleware training system end-to-end</p>
+            </div>
+            
+            <div class="status info">
+                <strong>🔍 This test will:</strong><br>
+                • Create a test user account<br>
+                • Add training data through chat<br>
+                • Add high-quality training examples<br>
+                • Start model training<br>
+                • Monitor training progress<br>
+                • Activate the trained model<br>
+                • Test AI responses with the trained model
+            </div>
+            
+            <button id="startTest" onclick="runTrainingTest()">
+                🚀 Start Training Test
+            </button>
+            
+            <div id="status"></div>
+            <div id="output"></div>
+        </div>
 
-            // 2. Add some training data by chatting
-            setStatus('Adding training data through chat...', 'loading');
-            log('\n2. Adding training data through chat...');
-            const messages = [
-                'Hello, how are you?',
-                'Can you help me with JavaScript?',
-                'What is machine learning?',
-                'How do I deploy to Vercel?',
-                'Explain React hooks'
-            ];
+        <script>
+            const API_BASE = 'https://aimddlwr-git-main-hanz-pillervas-projects.vercel.app';
+            let isRunning = false;
 
-            for (const message of messages) {
-                const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
+            function log(message, type = 'info') {
+                const output = document.getElementById('output');
+                const timestamp = new Date().toLocaleTimeString();
+                output.textContent += `[${timestamp}] ${message}\n`;
+                output.scrollTop = output.scrollHeight;
+            }
+
+            function setStatus(message, type = 'info') {
+                const status = document.getElementById('status');
+                status.className = `status ${type}`;
+                status.innerHTML = type === 'loading' 
+                    ? `<span class="loading"></span>${message}` 
+                    : message;
+            }
+
+            async function runTrainingTest() {
+                if (isRunning) return;
+                
+                isRunning = true;
+                const button = document.getElementById('startTest');
+                button.disabled = true;
+                button.textContent = 'Running Test...';
+                
+                document.getElementById('output').textContent = '';
+                
+                try {
+                    await testTrainingFlow();
+                    setStatus('🎉 Training test completed successfully!', 'success');
+                } catch (error) {
+                    console.error('Test failed:', error);
+                    setStatus(`❌ Test failed: ${error.message}`, 'error');
+                    log(`❌ ERROR: ${error.message}`);
+                } finally {
+                    isRunning = false;
+                    button.disabled = false;
+                    button.textContent = '🚀 Start Training Test';
+                }
+            }
+
+            async function testTrainingFlow() {
+                log('🚀 Starting AI Training Flow Test...');
+                setStatus('Creating test user...', 'loading');
+
+                // 1. Register a test user
+                log('1. Registering test user...');
+                const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ message })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: `test${Date.now()}@example.com`,
+                        password: 'password123'
+                    })
                 });
                 
-                if (chatResponse.ok) {
-                    log(`📝 Added: "${message}"`);
-                } else {
-                    log(`❌ Failed to add: "${message}"`);
+                if (!registerResponse.ok) {
+                    throw new Error(`Registration failed: ${registerResponse.status}`);
                 }
-            }
-
-            // 3. Add high-quality training examples manually
-            setStatus('Adding high-quality training examples...', 'loading');
-            log('\n3. Adding high-quality training examples...');
-            const trainingExamples = [
-                {
-                    input: 'How do I use React useState?',
-                    output: 'useState is a React Hook that lets you add state to functional components. Usage: const [count, setCount] = useState(0);',
-                    quality_score: 5,
-                    category: 'programming'
-                },
-                {
-                    input: 'What is Next.js?',
-                    output: 'Next.js is a React framework that provides server-side rendering, static site generation, and many other production-ready features.',
-                    quality_score: 5,
-                    category: 'programming'
-                },
-                {
-                    input: 'How to deploy on Vercel?',
-                    output: 'To deploy on Vercel: 1) Install Vercel CLI, 2) Run "vercel" in your project directory, 3) Follow the prompts to deploy.',
-                    quality_score: 4,
-                    category: 'deployment'
-                }
-            ];
-
-            for (const example of trainingExamples) {
-                const addResponse = await fetch(`${API_BASE}/api/data/training`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(example)
-                });
                 
-                if (addResponse.ok) {
-                    log(`📚 Added training example: "${example.input}"`);
-                } else {
-                    log(`❌ Failed to add training example: "${example.input}"`);
-                }
-            }
+                const { token } = await registerResponse.json();
+                log('✅ User registered successfully');
 
-            // 4. Check training data
-            setStatus('Checking training data...', 'loading');
-            log('\n4. Checking training data...');
-            const trainingDataResponse = await fetch(`${API_BASE}/api/data/training`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (trainingDataResponse.ok) {
-                const trainingData = await trainingDataResponse.json();
-                log(`📊 Total training examples: ${trainingData.statistics.total}`);
-                log(`🏆 High quality examples: ${trainingData.statistics.high_quality}`);
-            } else {
-                log('❌ Failed to fetch training data');
-            }
+                // 2. Add some training data by chatting
+                setStatus('Adding training data through chat...', 'loading');
+                log('\n2. Adding training data through chat...');
+                const messages = [
+                    'Hello, how are you?',
+                    'Can you help me with JavaScript?',
+                    'What is machine learning?',
+                    'How do I deploy to Vercel?',
+                    'Explain React hooks'
+                ];
 
-            // 5. Start training
-            setStatus('Starting model training...', 'loading');
-            log('\n5. Starting model training...');
-            const trainingResponse = await fetch(`${API_BASE}/api/ai/train`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    epochs: 3,
-                    learningRate: 0.001,
-                    modelName: 'Test Custom Model'
-                })
-            });
-            
-            const trainingResult = await trainingResponse.json();
-            
-            if (trainingResult.success) {
-                log(`🚀 Training started! Job ID: ${trainingResult.jobId}`);
-                log(`📈 Training ${trainingResult.trainingDataCount} examples`);
-
-                // 6. Monitor training progress
-                setStatus('Monitoring training progress...', 'loading');
-                log('\n6. Monitoring training progress...');
-                const jobId = trainingResult.jobId;
-                let isComplete = false;
-                let attempts = 0;
-                const maxAttempts = 20;
-
-                while (!isComplete && attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    
-                    const statusResponse = await fetch(`${API_BASE}/api/ai/train?jobId=${jobId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                for (const message of messages) {
+                    const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ message })
                     });
-                    const status = await statusResponse.json();
                     
-                    log(`📊 Status: ${status.status} | Progress: ${status.progress_percentage?.toFixed(1)}% | Epoch: ${status.current_epoch || 0}`);
-                    
-                    if (status.status === 'completed') {
-                        isComplete = true;
-                        log('🎉 Training completed successfully!');
-                    } else if (status.status === 'failed') {
-                        throw new Error(`Training failed: ${status.error_message}`);
+                    if (chatResponse.ok) {
+                        log(`📝 Added: "${message}"`);
+                    } else {
+                        log(`❌ Failed to add: "${message}"`);
                     }
+                }
+
+                // 3. Add high-quality training examples manually
+                setStatus('Adding high-quality training examples...', 'loading');
+                log('\n3. Adding high-quality training examples...');
+                const trainingExamples = [
+                    {
+                        input: 'How do I use React useState?',
+                        output: 'useState is a React Hook that lets you add state to functional components. Usage: const [count, setCount] = useState(0);',
+                        quality_score: 5,
+                        category: 'programming'
+                    },
+                    {
+                        input: 'What is Next.js?',
+                        output: 'Next.js is a React framework that provides server-side rendering, static site generation, and many other production-ready features.',
+                        quality_score: 5,
+                        category: 'programming'
+                    },
+                    {
+                        input: 'How to deploy on Vercel?',
+                        output: 'To deploy on Vercel: 1) Install Vercel CLI, 2) Run "vercel" in your project directory, 3) Follow the prompts to deploy.',
+                        quality_score: 4,
+                        category: 'deployment'
+                    }
+                ];
+
+                for (const example of trainingExamples) {
+                    const addResponse = await fetch(`${API_BASE}/api/data/training`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(example)
+                    });
                     
-                    attempts++;
+                    if (addResponse.ok) {
+                        log(`📚 Added training example: "${example.input}"`);
+                    } else {
+                        log(`❌ Failed to add training example: "${example.input}"`);
+                    }
                 }
 
-                if (!isComplete) {
-                    log('⏰ Training is still in progress (check later)');
-                }
-
-                // 7. Check models
-                setStatus('Checking available models...', 'loading');
-                log('\n7. Checking available models...');
-                const modelsResponse = await fetch(`${API_BASE}/api/ai/models`, {
+                // 4. Check training data
+                setStatus('Checking training data...', 'loading');
+                log('\n4. Checking training data...');
+                const trainingDataResponse = await fetch(`${API_BASE}/api/data/training`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (modelsResponse.ok) {
-                    const models = await modelsResponse.json();
-                    log(`🤖 Total models: ${models.length}`);
-                    models.forEach(model => {
-                        log(`  - ${model.name}: ${model.status} (Accuracy: ${(model.accuracy * 100).toFixed(1)}%)`);
-                    });
-
-                    // 8. Activate the trained model
-                    if (models.length > 0) {
-                        const latestModel = models[0];
-                        setStatus('Activating trained model...', 'loading');
-                        log(`\n8. Activating model: ${latestModel.name}...`);
-                        
-                        const activateResponse = await fetch(`${API_BASE}/api/ai/models`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ modelId: latestModel.id })
-                        });
-                        
-                        if (activateResponse.ok) {
-                            log('✅ Model activated successfully!');
-                        }
-                    }
-
-                    // 9. Test the trained model
-                    setStatus('Testing trained model responses...', 'loading');
-                    log('\n9. Testing responses with trained model...');
-                    const testMessages = [
-                        'How do I use React useState?',
-                        'What is Next.js?',
-                        'Hello there!',
-                        'Can you help me with coding?'
-                    ];
-
-                    for (const message of testMessages) {
-                        const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ message })
-                        });
-                        
-                        if (chatResponse.ok) {
-                            const chatResult = await chatResponse.json();
-                            log(`\n💬 You: ${message}`);
-                            log(`🤖 AI: ${chatResult.response}`);
-                        }
-                    }
+                if (trainingDataResponse.ok) {
+                    const trainingData = await trainingDataResponse.json();
+                    log(`📊 Total training examples: ${trainingData.statistics.total}`);
+                    log(`🏆 High quality examples: ${trainingData.statistics.high_quality}`);
+                } else {
+                    log('❌ Failed to fetch training data');
                 }
-            } else {
-                throw new Error(`Training failed to start: ${trainingResult.error}`);
-            }
 
-            log('\n🎉 Training flow test completed successfully!');
-            log('\n📋 Summary:');
-            log('- Created user account');
-            log('- Added training examples');
-            log('- Trained a custom model');
-            log('- Activated the model');
-            log('- Tested AI responses with trained model');
-        }
-    </script>
-</body>
-</html>
+                // 5. Start training
+                setStatus('Starting model training...', 'loading');
+                log('\n5. Starting model training...');
+                const trainingResponse = await fetch(`${API_BASE}/api/ai/train`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        epochs: 3,
+                        learningRate: 0.001,
+                        modelName: 'Test Custom Model'
+                    })
+                });
+                
+                const trainingResult = await trainingResponse.json();
+                
+                if (trainingResult.success) {
+                    log(`🚀 Training started! Job ID: ${trainingResult.jobId}`);
+                    log(`📈 Training ${trainingResult.trainingDataCount} examples`);
+
+                    // 6. Monitor training progress
+                    setStatus('Monitoring training progress...', 'loading');
+                    log('\n6. Monitoring training progress...');
+                    const jobId = trainingResult.jobId;
+                    let isComplete = false;
+                    let attempts = 0;
+                    const maxAttempts = 20;
+
+                    while (!isComplete && attempts < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        
+                        const statusResponse = await fetch(`${API_BASE}/api/ai/train?jobId=${jobId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const status = await statusResponse.json();
+                        
+                        log(`📊 Status: ${status.status} | Progress: ${status.progress_percentage?.toFixed(1)}% | Epoch: ${status.current_epoch || 0}`);
+                        
+                        if (status.status === 'completed') {
+                            isComplete = true;
+                            log('🎉 Training completed successfully!');
+                        } else if (status.status === 'failed') {
+                            throw new Error(`Training failed: ${status.error_message}`);
+                        }
+                        
+                        attempts++;
+                    }
+
+                    if (!isComplete) {
+                        log('⏰ Training is still in progress (check later)');
+                    }
+
+                    // 7. Check models
+                    setStatus('Checking available models...', 'loading');
+                    log('\n7. Checking available models...');
+                    const modelsResponse = await fetch(`${API_BASE}/api/ai/models`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (modelsResponse.ok) {
+                        const models = await modelsResponse.json();
+                        log(`🤖 Total models: ${models.length}`);
+                        models.forEach(model => {
+                            log(`  - ${model.name}: ${model.status} (Accuracy: ${(model.accuracy * 100).toFixed(1)}%)`);
+                        });
+
+                        // 8. Activate the trained model
+                        if (models.length > 0) {
+                            const latestModel = models[0];
+                            setStatus('Activating trained model...', 'loading');
+                            log(`\n8. Activating model: ${latestModel.name}...`);
+                            
+                            const activateResponse = await fetch(`${API_BASE}/api/ai/models`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ modelId: latestModel.id })
+                            });
+                            
+                            if (activateResponse.ok) {
+                                log('✅ Model activated successfully!');
+                            }
+                        }
+
+                        // 9. Test the trained model
+                        setStatus('Testing trained model responses...', 'loading');
+                        log('\n9. Testing responses with trained model...');
+                        const testMessages = [
+                            'How do I use React useState?',
+                            'What is Next.js?',
+                            'Hello there!',
+                            'Can you help me with coding?'
+                        ];
+
+                        for (const message of testMessages) {
+                            const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ message })
+                            });
+                            
+                            if (chatResponse.ok) {
+                                const chatResult = await chatResponse.json();
+                                log(`\n💬 You: ${message}`);
+                                log(`🤖 AI: ${chatResult.response}`);
+                            }
+                        }
+                    }
+                } else {
+                    throw new Error(`Training failed to start: ${trainingResult.error}`);
+                }
+
+                log('\n🎉 Training flow test completed successfully!');
+                log('\n📋 Summary:');
+                log('- Created user account');
+                log('- Added training examples');
+                log('- Trained a custom model');
+                log('- Activated the model');
+                log('- Tested AI responses with trained model');
+            }
+        </script>
+    </body>
+    </html>
