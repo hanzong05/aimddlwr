@@ -1,4 +1,4 @@
-// api/ai/chat.js - Replace the existing file with this API endpoint
+// api/ai/chat.js - Improved version with better context understanding
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 
@@ -36,8 +36,10 @@ export default async function handler(req, res) {
 
     console.log('Processing chat request:', { userId, message, conversationId });
 
-    // Find or create conversation
+    // Get conversation context
     let conversation;
+    let conversationHistory = [];
+    
     if (conversationId) {
       const { data: existingConv } = await supabase
         .from('conversations')
@@ -46,6 +48,18 @@ export default async function handler(req, res) {
         .eq('user_id', userId)
         .single();
       conversation = existingConv;
+
+      // Get recent conversation history for context
+      if (conversation) {
+        const { data: history } = await supabase
+          .from('messages')
+          .select('type, content')
+          .eq('conversation_id', conversationId)
+          .order('timestamp', { ascending: false })
+          .limit(10);
+        
+        conversationHistory = history ? history.reverse() : [];
+      }
     }
 
     if (!conversation) {
@@ -81,8 +95,8 @@ export default async function handler(req, res) {
       throw userMsgError;
     }
 
-    // Generate AI response
-    const aiResponse = await generateAIResponse(message, userId);
+    // Generate AI response with context
+    const aiResponse = await generateAIResponse(message, userId, conversationHistory);
 
     // Save AI message
     const { data: aiMessage, error: aiMsgError } = await supabase
@@ -138,8 +152,8 @@ export default async function handler(req, res) {
   }
 }
 
-// AI response generator
-async function generateAIResponse(message, userId) {
+// Improved AI response generator with better context understanding
+async function generateAIResponse(message, userId, conversationHistory = []) {
   try {
     console.log('Generating AI response for:', message);
 
@@ -177,6 +191,26 @@ async function generateAIResponse(message, userId) {
     if (process.env.OPENAI_API_KEY) {
       try {
         console.log('Calling OpenAI API');
+        
+        // Build context-aware messages
+        const messages = [
+          { 
+            role: 'system', 
+            content: 'You are a helpful, friendly AI assistant. Be conversational and remember context from the conversation. When someone introduces themselves, acknowledge their name warmly.' 
+          }
+        ];
+
+        // Add conversation history for context
+        conversationHistory.slice(-6).forEach(msg => {
+          messages.push({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          });
+        });
+
+        // Add current message
+        messages.push({ role: 'user', content: message });
+
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -185,13 +219,7 @@ async function generateAIResponse(message, userId) {
           },
           body: JSON.stringify({
             model: 'gpt-3.5-turbo',
-            messages: [{ 
-              role: 'system', 
-              content: 'You are a helpful AI assistant. Be concise and friendly.' 
-            }, { 
-              role: 'user', 
-              content: message 
-            }],
+            messages: messages,
             max_tokens: 500,
             temperature: 0.7,
           }),
@@ -229,27 +257,16 @@ async function generateAIResponse(message, userId) {
       }
     }
 
-    // Fallback responses
-    const category = detectCategory(message);
-    let response;
+    // Improved fallback responses with better context awareness
+    const response = generateContextualFallback(message, conversationHistory);
 
-    if (category === 'greeting') {
-      response = "Hello! I'm your AI assistant. How can I help you today?";
-    } else if (category === 'programming') {
-      response = `I'd be happy to help you with programming! You asked about: "${message}". Could you provide more specific details about what you're trying to accomplish?`;
-    } else if (category === 'help') {
-      response = `I understand you're looking for help with: "${message}". I'm still learning about this topic. Could you give me more context so I can assist you better?`;
-    } else {
-      response = `That's an interesting question about: "${message}". I'm building my knowledge on this topic. What specific information would be most helpful for you?`;
-    }
-
-    console.log('Using fallback response');
+    console.log('Using improved fallback response');
     return {
-      content: response,
-      confidence: 0.4,
+      content: response.content,
+      confidence: response.confidence,
       source: 'fallback',
       learned: false,
-      category: category
+      category: response.category
     };
 
   } catch (error) {
@@ -264,20 +281,134 @@ async function generateAIResponse(message, userId) {
   }
 }
 
+function generateContextualFallback(message, conversationHistory) {
+  const msg = message.toLowerCase().trim();
+  
+  // Check if this looks like an introduction or name mention
+  if (isIntroduction(msg, conversationHistory)) {
+    const name = extractName(msg);
+    if (name) {
+      return {
+        content: `Nice to meet you, ${name}! I'm your AI assistant. How can I help you today?`,
+        confidence: 0.7,
+        category: 'introduction'
+      };
+    } else {
+      return {
+        content: "Nice to meet you! I'm your AI assistant. What's your name, and how can I help you today?",
+        confidence: 0.6,
+        category: 'introduction'
+      };
+    }
+  }
+
+  // Check if they're correcting/clarifying something from previous messages
+  if (isCorrection(msg, conversationHistory)) {
+    return {
+      content: "I understand, thank you for clarifying! I'll remember that. Is there anything else I can help you with?",
+      confidence: 0.6,
+      category: 'clarification'
+    };
+  }
+
+  // Detect category and respond appropriately
+  const category = detectCategory(msg);
+  
+  switch (category) {
+    case 'greeting':
+      return {
+        content: "Hello! I'm your AI assistant. How can I help you today?",
+        confidence: 0.7,
+        category: 'greeting'
+      };
+      
+    case 'programming':
+      return {
+        content: `I'd be happy to help you with programming! Could you tell me more specifically what you're working on or what you'd like to know?`,
+        confidence: 0.6,
+        category: 'programming'
+      };
+      
+    case 'help':
+      return {
+        content: `I'm here to help! Could you give me more details about what you need assistance with?`,
+        confidence: 0.6,
+        category: 'help'
+      };
+      
+    default:
+      return {
+        content: `I'm still learning about many topics. Could you tell me more about what you're looking for? I'd love to help however I can!`,
+        confidence: 0.4,
+        category: 'general'
+      };
+  }
+}
+
+function isIntroduction(message, conversationHistory) {
+  const introPatterns = [
+    /^(i'm|im|i am|my name is|call me|this is)\s+\w+/i,
+    /^(hi|hello|hey),?\s*(i'm|im|i am|my name is)\s+\w+/i,
+    /^(i'm|im|i am)\s+\w+$/i
+  ];
+  
+  // Check if this looks like an introduction
+  const looksLikeIntro = introPatterns.some(pattern => pattern.test(message));
+  
+  // Check if it's early in the conversation (less than 3 messages)
+  const isEarlyConversation = conversationHistory.length < 6;
+  
+  return looksLikeIntro && isEarlyConversation;
+}
+
+function extractName(message) {
+  const namePatterns = [
+    /(?:i'm|im|i am|my name is|call me)\s+(\w+)/i,
+    /^(\w+)$/i
+  ];
+  
+  for (const pattern of namePatterns) {
+    const match = message.match(pattern);
+    if (match && match[1] && match[1].length > 1) {
+      return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    }
+  }
+  return null;
+}
+
+function isCorrection(message, conversationHistory) {
+  const correctionPatterns = [
+    /^no,?\s+/i,
+    /^that's (not|wrong)/i,
+    /^(actually|no)\s+/i,
+    /^that'?s my/i
+  ];
+  
+  const hasRecentBotMessage = conversationHistory.length > 0 && 
+    conversationHistory[conversationHistory.length - 1]?.type === 'assistant';
+  
+  return correctionPatterns.some(pattern => pattern.test(message)) && hasRecentBotMessage;
+}
+
 function detectCategory(message) {
   const msg = message.toLowerCase();
   
   if (msg.includes('code') || msg.includes('programming') || msg.includes('javascript') || 
       msg.includes('react') || msg.includes('python') || msg.includes('function') || 
-      msg.includes('variable') || msg.includes('debug')) {
+      msg.includes('variable') || msg.includes('debug') || msg.includes('html') || 
+      msg.includes('css') || msg.includes('api')) {
     return 'programming';
   }
+  
   if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey') || 
-      msg.includes('good morning') || msg.includes('good afternoon')) {
+      msg.includes('good morning') || msg.includes('good afternoon') || 
+      msg.includes('good evening') || msg.startsWith('sup')) {
     return 'greeting';
   }
+  
   if (msg.includes('help') || msg.includes('how') || msg.includes('what') || 
-      msg.includes('explain') || msg.includes('tell me') || msg.includes('show me')) {
+      msg.includes('explain') || msg.includes('tell me') || msg.includes('show me') ||
+      msg.includes('can you') || msg.includes('could you')) {
     return 'help';
   }
   
