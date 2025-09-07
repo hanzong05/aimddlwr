@@ -7,6 +7,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/learning/(.*)",
+      "destination": "/api/learning?endpoint=$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
