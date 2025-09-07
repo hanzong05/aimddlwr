@@ -5,14 +5,10 @@
       "maxDuration": 30
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     }
   ],
   "headers": [
@@ -33,8 +29,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
