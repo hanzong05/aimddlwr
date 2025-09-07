@@ -1,0 +1,462 @@
+-- 🗄️ COMPLETE SUPABASE DATABASE SCHEMA FOR AI MIDDLEWARE SERVICE
+-- Run this in your Supabase SQL Editor
+
+-- =================================================================
+-- 1. USERS TABLE
+-- =================================================================
+CREATE TABLE users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  app_id VARCHAR(100) DEFAULT 'default',
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  avatar_url TEXT,
+  subscription_plan VARCHAR(50) DEFAULT 'free',
+  is_active BOOLEAN DEFAULT true,
+  email_verified BOOLEAN DEFAULT false,
+  last_login TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes for performance
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_app_id ON users(app_id);
+CREATE INDEX idx_users_subscription_plan ON users(subscription_plan);
+
+-- =================================================================
+-- 2. CONVERSATIONS TABLE
+-- =================================================================
+CREATE TABLE conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  summary TEXT,
+  status VARCHAR(50) DEFAULT 'active',
+  message_count INTEGER DEFAULT 0,
+  last_message_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_conversations_status ON conversations(status);
+CREATE INDEX idx_conversations_created_at ON conversations(created_at);
+
+-- =================================================================
+-- 3. MESSAGES TABLE
+-- =================================================================
+CREATE TABLE messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
+  type VARCHAR(20) NOT NULL CHECK (type IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  tokens_used INTEGER DEFAULT 0,
+  response_time_ms INTEGER,
+  feedback_score INTEGER CHECK (feedback_score >= 1 AND feedback_score <= 5),
+  feedback_comment TEXT,
+  timestamp TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
+CREATE INDEX idx_messages_type ON messages(type);
+CREATE INDEX idx_messages_timestamp ON messages(timestamp);
+CREATE INDEX idx_messages_feedback_score ON messages(feedback_score);
+
+-- =================================================================
+-- 4. TRAINING_DATA TABLE
+-- =================================================================
+CREATE TABLE training_data (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  input TEXT NOT NULL,
+  output TEXT NOT NULL,
+  feedback INTEGER CHECK (feedback >= 1 AND feedback <= 5),
+  quality_score FLOAT DEFAULT 3.0 CHECK (quality_score >= 1.0 AND quality_score <= 5.0),
+  category VARCHAR(100),
+  tags TEXT[],
+  used_in_training BOOLEAN DEFAULT false,
+  training_batch_id UUID,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_training_data_user_id ON training_data(user_id);
+CREATE INDEX idx_training_data_category ON training_data(category);
+CREATE INDEX idx_training_data_quality_score ON training_data(quality_score);
+CREATE INDEX idx_training_data_used_in_training ON training_data(used_in_training);
+
+-- =================================================================
+-- 5. MODELS TABLE
+-- =================================================================
+CREATE TABLE models (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  accuracy FLOAT DEFAULT 0 CHECK (accuracy >= 0 AND accuracy <= 1),
+  status VARCHAR(50) DEFAULT 'initialized' CHECK (status IN ('initialized', 'training', 'trained', 'deployed', 'failed', 'archived')),
+  model_type VARCHAR(100) DEFAULT 'text_generation',
+  model_config JSONB DEFAULT '{}',
+  training_examples INTEGER DEFAULT 0,
+  training_duration_seconds INTEGER,
+  file_path TEXT,
+  file_size_bytes BIGINT,
+  performance_metrics JSONB DEFAULT '{}',
+  deployment_url TEXT,
+  is_active BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_models_user_id ON models(user_id);
+CREATE INDEX idx_models_status ON models(status);
+CREATE INDEX idx_models_version ON models(version);
+CREATE INDEX idx_models_is_active ON models(is_active);
+
+-- Ensure only one active model per user
+CREATE UNIQUE INDEX idx_models_user_active ON models(user_id) WHERE is_active = true;
+
+-- =================================================================
+-- 6. TRAINING_JOBS TABLE
+-- =================================================================
+CREATE TABLE training_jobs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  model_id UUID REFERENCES models(id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+  training_data_count INTEGER DEFAULT 0,
+  epochs INTEGER DEFAULT 10,
+  batch_size INTEGER DEFAULT 32,
+  learning_rate FLOAT DEFAULT 0.001,
+  progress_percentage FLOAT DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100),
+  current_epoch INTEGER DEFAULT 0,
+  loss_value FLOAT,
+  accuracy_value FLOAT,
+  estimated_completion TIMESTAMP,
+  error_message TEXT,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_training_jobs_user_id ON training_jobs(user_id);
+CREATE INDEX idx_training_jobs_status ON training_jobs(status);
+CREATE INDEX idx_training_jobs_created_at ON training_jobs(created_at);
+
+-- =================================================================
+-- 7. API_USAGE TABLE (for monitoring and billing)
+-- =================================================================
+CREATE TABLE api_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  endpoint VARCHAR(255) NOT NULL,
+  method VARCHAR(10) NOT NULL,
+  status_code INTEGER NOT NULL,
+  tokens_used INTEGER DEFAULT 0,
+  response_time_ms INTEGER,
+  ip_address INET,
+  user_agent TEXT,
+  request_id UUID,
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_api_usage_user_id ON api_usage(user_id);
+CREATE INDEX idx_api_usage_endpoint ON api_usage(endpoint);
+CREATE INDEX idx_api_usage_created_at ON api_usage(created_at);
+CREATE INDEX idx_api_usage_status_code ON api_usage(status_code);
+
+-- =================================================================
+-- 8. USER_PREFERENCES TABLE
+-- =================================================================
+CREATE TABLE user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  ai_personality VARCHAR(100) DEFAULT 'helpful',
+  response_style VARCHAR(100) DEFAULT 'balanced',
+  language VARCHAR(10) DEFAULT 'en',
+  max_response_length INTEGER DEFAULT 500,
+  enable_context_memory BOOLEAN DEFAULT true,
+  enable_training_data_collection BOOLEAN DEFAULT true,
+  enable_analytics BOOLEAN DEFAULT true,
+  custom_instructions TEXT,
+  preferences JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add index
+CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+
+-- =================================================================
+-- 9. FEEDBACK TABLE
+-- =================================================================
+CREATE TABLE feedback (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('rating', 'correction', 'suggestion', 'bug_report')),
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  suggested_response TEXT,
+  metadata JSONB DEFAULT '{}',
+  is_processed BOOLEAN DEFAULT false,
+  admin_response TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_feedback_user_id ON feedback(user_id);
+CREATE INDEX idx_feedback_type ON feedback(type);
+CREATE INDEX idx_feedback_rating ON feedback(rating);
+CREATE INDEX idx_feedback_is_processed ON feedback(is_processed);
+
+-- =================================================================
+-- 10. SYSTEM_LOGS TABLE (for debugging and monitoring)
+-- =================================================================
+CREATE TABLE system_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  level VARCHAR(20) NOT NULL CHECK (level IN ('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL')),
+  service VARCHAR(100) NOT NULL,
+  message TEXT NOT NULL,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  request_id UUID,
+  metadata JSONB DEFAULT '{}',
+  stack_trace TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add indexes
+CREATE INDEX idx_system_logs_level ON system_logs(level);
+CREATE INDEX idx_system_logs_service ON system_logs(service);
+CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
+CREATE INDEX idx_system_logs_user_id ON system_logs(user_id);
+
+-- =================================================================
+-- FUNCTIONS AND TRIGGERS
+-- =================================================================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply updated_at triggers to relevant tables
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_conversations_updated_at
+    BEFORE UPDATE ON conversations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_training_data_updated_at
+    BEFORE UPDATE ON training_data
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_models_updated_at
+    BEFORE UPDATE ON models
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_training_jobs_updated_at
+    BEFORE UPDATE ON training_jobs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_preferences_updated_at
+    BEFORE UPDATE ON user_preferences
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_feedback_updated_at
+    BEFORE UPDATE ON feedback
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update conversation message count and last message time
+CREATE OR REPLACE FUNCTION update_conversation_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE conversations 
+        SET 
+            message_count = message_count + 1,
+            last_message_at = NEW.timestamp,
+            updated_at = NOW()
+        WHERE id = NEW.conversation_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE conversations 
+        SET 
+            message_count = GREATEST(0, message_count - 1),
+            updated_at = NOW()
+        WHERE id = OLD.conversation_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply trigger to messages table
+CREATE TRIGGER update_conversation_stats_on_message
+    AFTER INSERT OR DELETE ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_stats();
+
+-- =================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- =================================================================
+
+-- Enable RLS on all user-specific tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE training_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+ALTER TABLE training_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+
+-- Create policies (these are examples - adjust based on your auth setup)
+-- Users can only see their own data
+CREATE POLICY "Users can view own profile" ON users
+    FOR SELECT USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can update own profile" ON users
+    FOR UPDATE USING (auth.uid()::text = id::text);
+
+-- Users can only access their own conversations
+CREATE POLICY "Users can view own conversations" ON conversations
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+-- Users can only access their own messages
+CREATE POLICY "Users can view own messages" ON messages
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM conversations 
+            WHERE conversations.id = messages.conversation_id 
+            AND conversations.user_id::text = auth.uid()::text
+        )
+    );
+
+-- Similar policies for other tables...
+CREATE POLICY "Users can view own training data" ON training_data
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own models" ON models
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+-- =================================================================
+-- SAMPLE DATA (Optional - for testing)
+-- =================================================================
+
+-- Insert sample user (remove in production)
+-- INSERT INTO users (email, password, first_name, last_name) 
+-- VALUES ('demo@example.com', '$2b$12$demo_hashed_password', 'Demo', 'User');
+
+-- =================================================================
+-- VIEWS FOR ANALYTICS (Optional)
+-- =================================================================
+
+-- View for user activity summary
+CREATE VIEW user_activity_summary AS
+SELECT 
+    u.id,
+    u.email,
+    u.created_at as user_since,
+    COUNT(DISTINCT c.id) as total_conversations,
+    COUNT(DISTINCT m.id) as total_messages,
+    COUNT(DISTINCT td.id) as training_examples,
+    COUNT(DISTINCT mo.id) as models_created,
+    MAX(m.timestamp) as last_activity
+FROM users u
+LEFT JOIN conversations c ON u.id = c.user_id
+LEFT JOIN messages m ON c.id = m.conversation_id
+LEFT JOIN training_data td ON u.id = td.user_id
+LEFT JOIN models mo ON u.id = mo.user_id
+GROUP BY u.id, u.email, u.created_at;
+
+-- View for model performance metrics
+CREATE VIEW model_performance AS
+SELECT 
+    m.*,
+    u.email as user_email,
+    COUNT(td.id) as training_examples_used
+FROM models m
+JOIN users u ON m.user_id = u.id
+LEFT JOIN training_data td ON m.user_id = td.user_id AND td.used_in_training = true
+GROUP BY m.id, u.email;
+
+-- =================================================================
+-- CLEANUP FUNCTIONS (Optional)
+-- =================================================================
+
+-- Function to cleanup old logs (run periodically)
+CREATE OR REPLACE FUNCTION cleanup_old_logs(days_to_keep INTEGER DEFAULT 30)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM system_logs 
+    WHERE created_at < NOW() - INTERVAL '1 day' * days_to_keep;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to cleanup old API usage data
+CREATE OR REPLACE FUNCTION cleanup_old_api_usage(days_to_keep INTEGER DEFAULT 90)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM api_usage 
+    WHERE created_at < NOW() - INTERVAL '1 day' * days_to_keep;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =================================================================
+-- COMMENTS FOR DOCUMENTATION
+-- =================================================================
+
+COMMENT ON TABLE users IS 'Stores user account information and authentication data';
+COMMENT ON TABLE conversations IS 'Stores chat conversations between users and AI';
+COMMENT ON TABLE messages IS 'Individual messages within conversations';
+COMMENT ON TABLE training_data IS 'Data used to train and improve AI models';
+COMMENT ON TABLE models IS 'AI model versions and configurations';
+COMMENT ON TABLE training_jobs IS 'Tracks model training job status and progress';
+COMMENT ON TABLE api_usage IS 'Logs API calls for monitoring and billing';
+COMMENT ON TABLE user_preferences IS 'User-specific AI behavior and interface preferences';
+COMMENT ON TABLE feedback IS 'User feedback on AI responses and system functionality';
+COMMENT ON TABLE system_logs IS 'System-wide logging for debugging and monitoring';
+
+-- =================================================================
+-- COMPLETED! 
+-- Your database schema is now ready for production use.
+-- =================================================================
