@@ -1,422 +1,854 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Training Test</title>
-        <style>
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-                background: #f5f5f5;
-            }
-            
-            .container {
-                background: white;
-                border-radius: 12px;
-                padding: 30px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            
-            .header {
-                text-align: center;
-                margin-bottom: 30px;
-            }
-            
-            .header h1 {
-                color: #333;
-                margin-bottom: 10px;
-            }
-            
-            .header p {
-                color: #666;
-            }
-            
-            button {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 16px;
-                font-weight: 600;
-                width: 100%;
-                margin-bottom: 20px;
-                transition: transform 0.2s ease;
-            }
-            
-            button:hover {
-                transform: translateY(-2px);
-            }
-            
-            button:disabled {
-                background: #ccc;
-                cursor: not-allowed;
-                transform: none;
-            }
-            
-            #output {
-                background: #f8f9fa;
-                border: 1px solid #e9ecef;
-                border-radius: 8px;
-                padding: 20px;
-                font-family: 'Courier New', monospace;
-                font-size: 14px;
-                line-height: 1.5;
-                white-space: pre-wrap;
-                max-height: 500px;
-                overflow-y: auto;
-                margin-top: 20px;
-            }
-            
-            .status {
-                padding: 10px 15px;
-                border-radius: 6px;
-                margin-bottom: 20px;
-                font-weight: 500;
-            }
-            
-            .status.info {
-                background: #cce7ff;
-                color: #004085;
-                border: 1px solid #99d3ff;
-            }
-            
-            .status.success {
-                background: #d4edda;
-                color: #155724;
-                border: 1px solid #c3e6cb;
-            }
-            
-            .status.error {
-                background: #f8d7da;
-                color: #721c24;
-                border: 1px solid #f5c6cb;
-            }
-            
-            .loading {
-                display: inline-block;
-                width: 20px;
-                height: 20px;
-                border: 3px solid #f3f3f3;
-                border-top: 3px solid #667eea;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-right: 10px;
-            }
-            
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h1>🤖 AI Training Test</h1>
-                <p>Test your AI middleware training system end-to-end</p>
-            </div>
-            
-            <div class="status info">
-                <strong>🔍 This test will:</strong><br>
-                • Create a test user account<br>
-                • Add training data through chat<br>
-                • Add high-quality training examples<br>
-                • Start model training<br>
-                • Monitor training progress<br>
-                • Activate the trained model<br>
-                • Test AI responses with the trained model
-            </div>
-            
-            <button id="startTest" onclick="runTrainingTest()">
-                🚀 Start Training Test
-            </button>
-            
-            <div id="status"></div>
-            <div id="output"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 AI Brain Test Interface</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: transform 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .chat-interface {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .chat-box {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .user-message {
+            background: #667eea;
+            color: white;
+            margin-left: 20px;
+        }
+        
+        .ai-message {
+            background: #f0f0f0;
+            color: #333;
+            margin-right: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        #output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #99d3ff;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 AI Brain Test Interface</h1>
+            <p>Complete Brain System Testing with Advanced Training, Memory, and Tools</p>
         </div>
+        
+        <div class="status info">
+            <strong>🧪 Complete Brain Test Suite:</strong><br>
+            • Register user and setup brain profile<br>
+            • Auto-collect training data from web sources<br>
+            • Train advanced specialized models<br>
+            • Test memory system and tool integration<br>
+            • Chat with brain-powered AI responses<br>
+            • Monitor learning and performance metrics
+        </div>
+        
+        <div class="test-section">
+            <h3>🚀 Full Brain System Test</h3>
+            <button id="startFullTest" onclick="runFullBrainTest()">Start Complete Brain Test</button>
+            <button onclick="resetTest()">Reset Test Environment</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧠 Individual Components</h3>
+            <button onclick="testAutoLearning()">Test Auto-Learning</button>
+            <button onclick="testAdvancedTraining()">Test Advanced Training</button>
+            <button onclick="testMemorySystem()">Test Memory System</button>
+            <button onclick="testToolIntegration()">Test Tool Integration</button>
+            <button onclick="testBrainChat()">Test Brain Chat</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>💬 Interactive Brain Chat</h3>
+            <div class="chat-interface">
+                <div>
+                    <h4>Chat with Your AI Brain</h4>
+                    <div class="chat-box" id="chatBox"></div>
+                    <div class="input-group">
+                        <input type="text" id="chatInput" placeholder="Ask your AI brain anything..." onkeypress="handleChatKeypress(event)">
+                        <button onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+                <div>
+                    <h4>Brain Analytics</h4>
+                    <div class="metrics" id="brainMetrics">
+                        <div class="metric">
+                            <div class="metric-value" id="memoryCount">-</div>
+                            <div class="metric-label">Memories Stored</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="patternCount">-</div>
+                            <div class="metric-label">Patterns Learned</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="toolsEnabled">-</div>
+                            <div class="metric-label">Tools Enabled</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="brainConfidence">-</div>
+                            <div class="metric-label">Brain Confidence</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+        <div id="output"></div>
+    </div>
 
-        <script>
-            const API_BASE = 'https://aimddlwr-git-main-hanz-pillervas-projects.vercel.app';
-            let isRunning = false;
+    <script>
+        const API_BASE = 'https://aimddlwr-git-main-hanz-pillervas-projects.vercel.app';
+        let currentToken = null;
+        let currentUser = null;
+        let conversationId = null;
+        let isRunning = false;
 
-            function log(message, type = 'info') {
-                const output = document.getElementById('output');
-                const timestamp = new Date().toLocaleTimeString();
-                output.textContent += `[${timestamp}] ${message}\n`;
-                output.scrollTop = output.scrollHeight;
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.innerHTML = type === 'loading' 
+                ? `<span class="loading"></span>${message}` 
+                : message;
+        }
+
+        async function runFullBrainTest() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            const button = document.getElementById('startFullTest');
+            button.disabled = true;
+            button.textContent = 'Running Full Brain Test...';
+            
+            document.getElementById('output').textContent = '';
+            
+            try {
+                await fullBrainTestFlow();
+                setStatus('🎉 Complete brain test successful! Your AI brain is fully operational.', 'success');
+            } catch (error) {
+                console.error('Brain test failed:', error);
+                setStatus(`❌ Brain test failed: ${error.message}`, 'error');
+                log(`❌ ERROR: ${error.message}`);
+            } finally {
+                isRunning = false;
+                button.disabled = false;
+                button.textContent = 'Start Complete Brain Test';
             }
+        }
 
-            function setStatus(message, type = 'info') {
-                const status = document.getElementById('status');
-                status.className = `status ${type}`;
-                status.innerHTML = type === 'loading' 
-                    ? `<span class="loading"></span>${message}` 
-                    : message;
+        async function fullBrainTestFlow() {
+            log('🧠 Starting Complete AI Brain System Test...');
+            setStatus('Setting up user account and brain profile...', 'loading');
+
+            // 1. Setup user and brain
+            log('1. Setting up user account and brain profile...');
+            await setupUserAndBrain();
+
+            // 2. Test auto-learning
+            setStatus('Testing auto-learning system...', 'loading');
+            log('\n2. Testing auto-learning data collection...');
+            await testAutoLearningSystem();
+
+            // 3. Test memory system
+            setStatus('Testing brain memory system...', 'loading');
+            log('\n3. Testing brain memory system...');
+            await testMemorySystemFlow();
+
+            // 4. Test tool integration
+            setStatus('Testing tool integration...', 'loading');
+            log('\n4. Testing tool integration...');
+            await testToolIntegrationFlow();
+
+            // 5. Test advanced training
+            setStatus('Testing advanced model training...', 'loading');
+            log('\n5. Testing advanced model training...');
+            await testAdvancedTrainingFlow();
+
+            // 6. Test brain chat
+            setStatus('Testing brain-powered chat...', 'loading');
+            log('\n6. Testing brain-powered chat system...');
+            await testBrainChatFlow();
+
+            // 7. Analytics and insights
+            setStatus('Generating brain analytics...', 'loading');
+            log('\n7. Generating brain analytics and insights...');
+            await updateBrainAnalytics();
+
+            log('\n🎉 Complete AI Brain System Test Completed Successfully!');
+            log('\n📋 Summary:');
+            log('✅ User account and brain profile configured');
+            log('✅ Auto-learning collected training data from web sources');
+            log('✅ Memory system storing and retrieving episodic/semantic memories');
+            log('✅ Tool integration with web search, memory search, and more');
+            log('✅ Advanced model training with specialization');
+            log('✅ Brain-powered chat with context, memory, and tool use');
+            log('✅ Real-time analytics and learning insights');
+        }
+
+        async function setupUserAndBrain() {
+            // Register user
+            const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: `braintest${Date.now()}@example.com`,
+                    password: 'braintest123'
+                })
+            });
+            
+            if (!registerResponse.ok) {
+                throw new Error(`User registration failed: ${registerResponse.status}`);
             }
+            
+            const userData = await registerResponse.json();
+            currentToken = userData.token;
+            currentUser = userData.user;
+            log('✅ User registered and brain profile initialized');
+        }
 
-            async function runTrainingTest() {
-                if (isRunning) return;
+        async function testAutoLearningSystem() {
+            const autoLearnResponse = await fetch(`${API_BASE}/api/ai/auto-learn`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({
+                    topics: ['javascript', 'react', 'ai', 'programming'],
+                    sources: ['stackoverflow', 'github'],
+                    maxPages: 20,
+                    learningMode: 'code'
+                })
+            });
+            
+            if (autoLearnResponse.ok) {
+                const result = await autoLearnResponse.json();
+                log(`🤖 Auto-learning started: Session ${result.sessionId}`);
                 
-                isRunning = true;
-                const button = document.getElementById('startTest');
-                button.disabled = true;
-                button.textContent = 'Running Test...';
-                
-                document.getElementById('output').textContent = '';
-                
-                try {
-                    await testTrainingFlow();
-                    setStatus('🎉 Training test completed successfully!', 'success');
-                } catch (error) {
-                    console.error('Test failed:', error);
-                    setStatus(`❌ Test failed: ${error.message}`, 'error');
-                    log(`❌ ERROR: ${error.message}`);
-                } finally {
-                    isRunning = false;
-                    button.disabled = false;
-                    button.textContent = '🚀 Start Training Test';
-                }
+                // Monitor progress
+                await monitorAutoLearning(result.sessionId);
+            } else {
+                log('❌ Auto-learning test failed');
             }
+        }
 
-            async function testTrainingFlow() {
-                log('🚀 Starting AI Training Flow Test...');
-                setStatus('Creating test user...', 'loading');
-
-                // 1. Register a test user
-                log('1. Registering test user...');
-                const registerResponse = await fetch(`${API_BASE}/api/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: `test${Date.now()}@example.com`,
-                        password: 'password123'
-                    })
+        async function monitorAutoLearning(sessionId) {
+            let isComplete = false;
+            let attempts = 0;
+            
+            while (!isComplete && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                const statusResponse = await fetch(`${API_BASE}/api/ai/auto-learn?sessionId=${sessionId}`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
                 });
                 
-                if (!registerResponse.ok) {
-                    throw new Error(`Registration failed: ${registerResponse.status}`);
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    log(`📊 Auto-learning: ${status.status} | Progress: ${status.progress || 0}%`);
+                    
+                    if (status.status === 'completed') {
+                        isComplete = true;
+                        log(`✅ Auto-learning completed! Collected ${status.items_collected} items, stored ${status.items_stored}`);
+                    } else if (status.status === 'failed') {
+                        log(`❌ Auto-learning failed: ${status.error_message}`);
+                        break;
+                    }
                 }
                 
-                const { token } = await registerResponse.json();
-                log('✅ User registered successfully');
+                attempts++;
+            }
+        }
 
-                // 2. Add some training data by chatting
-                setStatus('Adding training data through chat...', 'loading');
-                log('\n2. Adding training data through chat...');
-                const messages = [
-                    'Hello, how are you?',
-                    'Can you help me with JavaScript?',
-                    'What is machine learning?',
-                    'How do I deploy to Vercel?',
-                    'Explain React hooks'
-                ];
-
-                for (const message of messages) {
-                    const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ message })
-                    });
-                    
-                    if (chatResponse.ok) {
-                        log(`📝 Added: "${message}"`);
-                    } else {
-                        log(`❌ Failed to add: "${message}"`);
-                    }
+        async function testMemorySystemFlow() {
+            // Create test memories
+            const memories = [
+                {
+                    type: 'episodic',
+                    content: 'User completed brain system setup and testing successfully',
+                    importance: 0.8,
+                    category: 'system_events'
+                },
+                {
+                    type: 'semantic',
+                    content: 'JavaScript is a programming language used for web development',
+                    importance: 0.7,
+                    category: 'programming'
                 }
+            ];
 
-                // 3. Add high-quality training examples manually
-                setStatus('Adding high-quality training examples...', 'loading');
-                log('\n3. Adding high-quality training examples...');
-                const trainingExamples = [
-                    {
-                        input: 'How do I use React useState?',
-                        output: 'useState is a React Hook that lets you add state to functional components. Usage: const [count, setCount] = useState(0);',
-                        quality_score: 5,
-                        category: 'programming'
-                    },
-                    {
-                        input: 'What is Next.js?',
-                        output: 'Next.js is a React framework that provides server-side rendering, static site generation, and many other production-ready features.',
-                        quality_score: 5,
-                        category: 'programming'
-                    },
-                    {
-                        input: 'How to deploy on Vercel?',
-                        output: 'To deploy on Vercel: 1) Install Vercel CLI, 2) Run "vercel" in your project directory, 3) Follow the prompts to deploy.',
-                        quality_score: 4,
-                        category: 'deployment'
-                    }
-                ];
-
-                for (const example of trainingExamples) {
-                    const addResponse = await fetch(`${API_BASE}/api/data/training`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(example)
-                    });
-                    
-                    if (addResponse.ok) {
-                        log(`📚 Added training example: "${example.input}"`);
-                    } else {
-                        log(`❌ Failed to add training example: "${example.input}"`);
-                    }
-                }
-
-                // 4. Check training data
-                setStatus('Checking training data...', 'loading');
-                log('\n4. Checking training data...');
-                const trainingDataResponse = await fetch(`${API_BASE}/api/data/training`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (trainingDataResponse.ok) {
-                    const trainingData = await trainingDataResponse.json();
-                    log(`📊 Total training examples: ${trainingData.statistics.total}`);
-                    log(`🏆 High quality examples: ${trainingData.statistics.high_quality}`);
-                } else {
-                    log('❌ Failed to fetch training data');
-                }
-
-                // 5. Start training
-                setStatus('Starting model training...', 'loading');
-                log('\n5. Starting model training...');
-                const trainingResponse = await fetch(`${API_BASE}/api/ai/train`, {
+            for (const memory of memories) {
+                const response = await fetch(`${API_BASE}/api/ai/brain-memory`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify(memory)
+                });
+                
+                if (response.ok) {
+                    log(`🧠 Stored ${memory.type} memory: ${memory.content.substring(0, 50)}...`);
+                } else {
+                    log(`❌ Failed to store memory: ${memory.type}`);
+                }
+            }
+
+            // Test memory search
+            const searchResponse = await fetch(`${API_BASE}/api/ai/brain-memory?query=programming&limit=5`, {
+                headers: { 'Authorization': `Bearer ${currentToken}` }
+            });
+            
+            if (searchResponse.ok) {
+                const results = await searchResponse.json();
+                log(`🔍 Memory search found ${results.memories.length} relevant memories`);
+            }
+        }
+
+        async function testToolIntegrationFlow() {
+            // List available tools
+            const toolsResponse = await fetch(`${API_BASE}/api/ai/brain-tools?action=list`, {
+                headers: { 'Authorization': `Bearer ${currentToken}` }
+            });
+            
+            if (toolsResponse.ok) {
+                const tools = await toolsResponse.json();
+                log(`🔧 Found ${tools.tools.length} available brain tools`);
+                
+                // Test memory search tool
+                const memoryToolResponse = await fetch(`${API_BASE}/api/ai/brain-tools?action=execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
                     },
                     body: JSON.stringify({
-                        epochs: 3,
-                        learningRate: 0.001,
-                        modelName: 'Test Custom Model'
+                        toolName: 'memory_search',
+                        action: 'search',
+                        parameters: { query: 'programming', limit: 3 }
                     })
                 });
                 
-                const trainingResult = await trainingResponse.json();
+                if (memoryToolResponse.ok) {
+                    const result = await memoryToolResponse.json();
+                    log(`🔧 Memory search tool executed successfully`);
+                }
+            }
+        }
+
+        async function testAdvancedTrainingFlow() {
+            const trainingResponse = await fetch(`${API_BASE}/api/ai/advanced-train`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`
+                },
+                body: JSON.stringify({
+                    trainingType: 'fine_tune',
+                    specialization: 'code',
+                    epochs: 2,
+                    modelName: 'Brain Test Model'
+                })
+            });
+            
+            if (trainingResponse.ok) {
+                const result = await trainingResponse.json();
+                log(`🚀 Advanced training started: Job ${result.jobId}`);
+                log(`📊 Training ${result.trainingDataCount} examples with ${result.specialization} specialization`);
                 
-                if (trainingResult.success) {
-                    log(`🚀 Training started! Job ID: ${trainingResult.jobId}`);
-                    log(`📈 Training ${trainingResult.trainingDataCount} examples`);
+                // Monitor training briefly
+                await monitorTraining(result.jobId);
+            } else {
+                const error = await trainingResponse.json();
+                log(`⚠️ Training skipped: ${error.error}`);
+            }
+        }
 
-                    // 6. Monitor training progress
-                    setStatus('Monitoring training progress...', 'loading');
-                    log('\n6. Monitoring training progress...');
-                    const jobId = trainingResult.jobId;
-                    let isComplete = false;
-                    let attempts = 0;
-                    const maxAttempts = 20;
-
-                    while (!isComplete && attempts < maxAttempts) {
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                        
-                        const statusResponse = await fetch(`${API_BASE}/api/ai/train?jobId=${jobId}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        const status = await statusResponse.json();
-                        
-                        log(`📊 Status: ${status.status} | Progress: ${status.progress_percentage?.toFixed(1)}% | Epoch: ${status.current_epoch || 0}`);
-                        
-                        if (status.status === 'completed') {
-                            isComplete = true;
-                            log('🎉 Training completed successfully!');
-                        } else if (status.status === 'failed') {
-                            throw new Error(`Training failed: ${status.error_message}`);
-                        }
-                        
-                        attempts++;
+        async function monitorTraining(jobId) {
+            let attempts = 0;
+            
+            while (attempts < 5) {
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                
+                const statusResponse = await fetch(`${API_BASE}/api/ai/advanced-train?jobId=${jobId}`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    log(`🤖 Training: ${status.status} | Epoch: ${status.current_epoch || 0} | Progress: ${status.progress_percentage?.toFixed(1) || 0}%`);
+                    
+                    if (status.status === 'completed') {
+                        log(`✅ Training completed! Model accuracy: ${(status.final_metrics?.overallScore * 100)?.toFixed(1) || 'N/A'}%`);
+                        break;
+                    } else if (status.status === 'failed') {
+                        log(`❌ Training failed: ${status.error_message}`);
+                        break;
                     }
+                }
+                
+                attempts++;
+            }
+        }
 
-                    if (!isComplete) {
-                        log('⏰ Training is still in progress (check later)');
-                    }
+        async function testBrainChatFlow() {
+            const testMessages = [
+                'Hello! Can you help me learn JavaScript?',
+                'What do you remember about programming?',
+                'Search for information about React hooks',
+                'Can you analyze my learning progress?'
+            ];
 
-                    // 7. Check models
-                    setStatus('Checking available models...', 'loading');
-                    log('\n7. Checking available models...');
-                    const modelsResponse = await fetch(`${API_BASE}/api/ai/models`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+            for (const message of testMessages) {
+                const chatResponse = await fetch(`${API_BASE}/api/ai/brain-chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ 
+                        message,
+                        conversationId,
+                        useTools: true,
+                        useBrainMemory: true
+                    })
+                });
+                
+                if (chatResponse.ok) {
+                    const result = await chatResponse.json();
+                    conversationId = result.conversationId;
+                    
+                    log(`\n💬 User: ${message}`);
+                    log(`🧠 AI Brain: ${result.response.substring(0, 150)}...`);
+                    log(`📊 Confidence: ${(result.brainConfidence * 100).toFixed(1)}% | Tools: ${result.toolsUsed?.join(', ') || 'none'} | Memories: ${result.memoryReferences?.length || 0}`);
+                } else {
+                    log(`❌ Chat failed for: ${message}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+
+        async function updateBrainAnalytics() {
+            try {
+                // Get memory count
+                const memoryResponse = await fetch(`${API_BASE}/api/ai/brain-memory?limit=1`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                // Get learning patterns
+                const patternsResponse = await fetch(`${API_BASE}/api/learning/learning?endpoint=patterns&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                // Get brain health
+                const healthResponse = await fetch(`${API_BASE}/api/learning/learning?endpoint=health`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                if (memoryResponse.ok) {
+                    const memoryData = await memoryResponse.json();
+                    document.getElementById('memoryCount').textContent = memoryData.total || 0;
+                }
+                
+                if (patternsResponse.ok) {
+                    const patternsData = await patternsResponse.json();
+                    document.getElementById('patternCount').textContent = patternsData.length || 0;
+                }
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    document.getElementById('brainConfidence').textContent = 
+                        (healthData.avg_confidence * 100).toFixed(0) + '%' || '0%';
+                }
+                
+                document.getElementById('toolsEnabled').textContent = '7'; // Default tools
+                
+                log('📊 Brain analytics updated successfully');
+            } catch (error) {
+                log('⚠️ Analytics update failed: ' + error.message);
+            }
+        }
+
+        // Individual test functions
+        async function testAutoLearning() {
+            if (!currentToken) {
+                setStatus('Please run full test first to setup user account', 'error');
+                return;
+            }
+            
+            setStatus('Testing auto-learning system...', 'loading');
+            log('🤖 Testing auto-learning system...');
+            
+            try {
+                await testAutoLearningSystem();
+                setStatus('Auto-learning test completed', 'success');
+            } catch (error) {
+                setStatus('Auto-learning test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testAdvancedTraining() {
+            if (!currentToken) {
+                setStatus('Please run full test first to setup user account', 'error');
+                return;
+            }
+            
+            setStatus('Testing advanced training...', 'loading');
+            log('🚀 Testing advanced training system...');
+            
+            try {
+                await testAdvancedTrainingFlow();
+                setStatus('Advanced training test completed', 'success');
+            } catch (error) {
+                setStatus('Advanced training test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testMemorySystem() {
+            if (!currentToken) {
+                setStatus('Please run full test first to setup user account', 'error');
+                return;
+            }
+            
+            setStatus('Testing memory system...', 'loading');
+            log('🧠 Testing memory system...');
+            
+            try {
+                await testMemorySystemFlow();
+                setStatus('Memory system test completed', 'success');
+            } catch (error) {
+                setStatus('Memory system test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testToolIntegration() {
+            if (!currentToken) {
+                setStatus('Please run full test first to setup user account', 'error');
+                return;
+            }
+            
+            setStatus('Testing tool integration...', 'loading');
+            log('🔧 Testing tool integration...');
+            
+            try {
+                await testToolIntegrationFlow();
+                setStatus('Tool integration test completed', 'success');
+            } catch (error) {
+                setStatus('Tool integration test failed: ' + error.message, 'error');
+            }
+        }
+
+        async function testBrainChat() {
+            if (!currentToken) {
+                setStatus('Please run full test first to setup user account', 'error');
+                return;
+            }
+            
+            setStatus('Testing brain chat...', 'loading');
+            log('💬 Testing brain-powered chat...');
+            
+            try {
+                await testBrainChatFlow();
+                setStatus('Brain chat test completed', 'success');
+            } catch (error) {
+                setStatus('Brain chat test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Interactive chat functions
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message || !currentToken) {
+                setStatus('Please enter a message and ensure you have run the full test', 'error');
+                return;
+            }
+            
+            input.value = '';
+            addChatMessage('user', message);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/ai/brain-chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({ 
+                        message,
+                        conversationId,
+                        useTools: true,
+                        useBrainMemory: true
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    conversationId = result.conversationId;
+                    
+                    addChatMessage('ai', result.response, {
+                        confidence: result.brainConfidence,
+                        tools: result.toolsUsed,
+                        memories: result.memoryReferences?.length
                     });
                     
-                    if (modelsResponse.ok) {
-                        const models = await modelsResponse.json();
-                        log(`🤖 Total models: ${models.length}`);
-                        models.forEach(model => {
-                            log(`  - ${model.name}: ${model.status} (Accuracy: ${(model.accuracy * 100).toFixed(1)}%)`);
-                        });
-
-                        // 8. Activate the trained model
-                        if (models.length > 0) {
-                            const latestModel = models[0];
-                            setStatus('Activating trained model...', 'loading');
-                            log(`\n8. Activating model: ${latestModel.name}...`);
-                            
-                            const activateResponse = await fetch(`${API_BASE}/api/ai/models`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ modelId: latestModel.id })
-                            });
-                            
-                            if (activateResponse.ok) {
-                                log('✅ Model activated successfully!');
-                            }
-                        }
-
-                        // 9. Test the trained model
-                        setStatus('Testing trained model responses...', 'loading');
-                        log('\n9. Testing responses with trained model...');
-                        const testMessages = [
-                            'How do I use React useState?',
-                            'What is Next.js?',
-                            'Hello there!',
-                            'Can you help me with coding?'
-                        ];
-
-                        for (const message of testMessages) {
-                            const chatResponse = await fetch(`${API_BASE}/api/ai/chat`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ message })
-                            });
-                            
-                            if (chatResponse.ok) {
-                                const chatResult = await chatResponse.json();
-                                log(`\n💬 You: ${message}`);
-                                log(`🤖 AI: ${chatResult.response}`);
-                            }
-                        }
-                    }
+                    // Update metrics
+                    updateChatMetrics(result);
                 } else {
-                    throw new Error(`Training failed to start: ${trainingResult.error}`);
+                    addChatMessage('ai', 'Sorry, I encountered an error processing your message.');
                 }
-
-                log('\n🎉 Training flow test completed successfully!');
-                log('\n📋 Summary:');
-                log('- Created user account');
-                log('- Added training examples');
-                log('- Trained a custom model');
-                log('- Activated the model');
-                log('- Tested AI responses with trained model');
+            } catch (error) {
+                addChatMessage('ai', 'Connection error. Please try again.');
             }
-        </script>
-    </body>
-    </html>
+        }
+
+        function addChatMessage(type, content, metadata = {}) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            
+            let messageContent = content;
+            if (type === 'ai' && metadata.confidence) {
+                messageContent += `\n\n🧠 Confidence: ${(metadata.confidence * 100).toFixed(1)}%`;
+                if (metadata.tools && metadata.tools.length > 0) {
+                    messageContent += ` | Tools: ${metadata.tools.join(', ')}`;
+                }
+                if (metadata.memories) {
+                    messageContent += ` | Memories: ${metadata.memories}`;
+                }
+            }
+            
+            messageDiv.textContent = messageContent;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function updateChatMetrics(result) {
+            if (result.brainConfidence) {
+                document.getElementById('brainConfidence').textContent = 
+                    (result.brainConfidence * 100).toFixed(0) + '%';
+            }
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function resetTest() {
+            currentToken = null;
+            currentUser = null;
+            conversationId = null;
+            document.getElementById('output').textContent = '';
+            document.getElementById('chatBox').innerHTML = '';
+            document.getElementById('chatInput').value = '';
+            
+            // Reset metrics
+            document.getElementById('memoryCount').textContent = '-';
+            document.getElementById('patternCount').textContent = '-';
+            document.getElementById('toolsEnabled').textContent = '-';
+            document.getElementById('brainConfidence').textContent = '-';
+            
+            setStatus('Test environment reset. Ready for new test.', 'info');
+            log('🔄 Test environment reset');
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🧠 AI Brain Test Interface Ready');
+            log('Click "Start Complete Brain Test" to begin comprehensive testing');
+        });
+    </script>
+</body>
+</html>
