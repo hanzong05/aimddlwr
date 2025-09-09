@@ -1,10 +1,19 @@
--- 🗄️ COMPLETE SUPABASE DATABASE SCHEMA FOR AI MIDDLEWARE SERVICE
--- Run this in your Supabase SQL Editor
+-- ============================================================================
+-- COMPLETE AI BRAIN DATABASE SCHEMA
+-- Single file containing all tables, functions, triggers, and setup
+-- Run this entire file in your Supabase SQL Editor
+-- ============================================================================
 
--- =================================================================
--- 1. USERS TABLE
--- =================================================================
-CREATE TABLE users (
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================================================
+-- CORE TABLES
+-- ============================================================================
+
+-- 1. USERS TABLE (Enhanced)
+CREATE TABLE IF NOT EXISTS users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
@@ -16,19 +25,67 @@ CREATE TABLE users (
   is_active BOOLEAN DEFAULT true,
   email_verified BOOLEAN DEFAULT false,
   last_login TIMESTAMP,
+  brain_enabled BOOLEAN DEFAULT true,
+  onboarding_completed BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes for performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_app_id ON users(app_id);
-CREATE INDEX idx_users_subscription_plan ON users(subscription_plan);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_app_id ON users(app_id);
+CREATE INDEX IF NOT EXISTS idx_users_subscription_plan ON users(subscription_plan);
+CREATE INDEX IF NOT EXISTS idx_users_brain_enabled ON users(brain_enabled);
 
--- =================================================================
--- 2. CONVERSATIONS TABLE
--- =================================================================
-CREATE TABLE conversations (
+-- 2. BRAIN_PROFILE TABLE - User's Brain Configuration
+CREATE TABLE IF NOT EXISTS brain_profile (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  brain_name VARCHAR(255) DEFAULT 'My AI Brain',
+  personality_traits JSONB DEFAULT '{"helpfulness": 0.9, "creativity": 0.7, "formality": 0.5, "proactivity": 0.8}',
+  learning_style VARCHAR(100) DEFAULT 'adaptive',
+  memory_retention_days INTEGER DEFAULT 365,
+  context_window_size INTEGER DEFAULT 10,
+  tools_enabled TEXT[] DEFAULT ARRAY['memory_search'],
+  learning_rate FLOAT DEFAULT 0.1 CHECK (learning_rate >= 0 AND learning_rate <= 1),
+  curiosity_level FLOAT DEFAULT 0.7 CHECK (curiosity_level >= 0 AND curiosity_level <= 1),
+  interests TEXT[],
+  expertise_areas TEXT[],
+  communication_style JSONB DEFAULT '{"verbosity": 0.7, "technical_level": 0.5, "humor": 0.3}',
+  goal_priorities JSONB DEFAULT '{"productivity": 0.8, "learning": 0.7, "entertainment": 0.3}',
+  privacy_settings JSONB DEFAULT '{"store_conversations": true, "learn_from_interactions": true, "share_insights": false}',
+  brain_state VARCHAR(50) DEFAULT 'learning',
+  last_interaction TIMESTAMP,
+  total_interactions INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_profile_user_id ON brain_profile(user_id);
+
+-- 3. USER_PREFERENCES TABLE (Enhanced)
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  ai_personality VARCHAR(100) DEFAULT 'helpful',
+  response_style VARCHAR(100) DEFAULT 'balanced',
+  language VARCHAR(10) DEFAULT 'en',
+  max_response_length INTEGER DEFAULT 500,
+  enable_context_memory BOOLEAN DEFAULT true,
+  enable_training_data_collection BOOLEAN DEFAULT true,
+  enable_analytics BOOLEAN DEFAULT true,
+  enable_brain_features BOOLEAN DEFAULT true,
+  enable_proactive_suggestions BOOLEAN DEFAULT true,
+  enable_tool_recommendations BOOLEAN DEFAULT true,
+  custom_instructions TEXT,
+  preferences JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
+
+-- 4. CONVERSATIONS TABLE (Enhanced)
+CREATE TABLE IF NOT EXISTS conversations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   title VARCHAR(255) NOT NULL,
@@ -36,42 +93,209 @@ CREATE TABLE conversations (
   status VARCHAR(50) DEFAULT 'active',
   message_count INTEGER DEFAULT 0,
   last_message_at TIMESTAMP,
+  brain_session_id UUID,
+  conversation_type VARCHAR(50) DEFAULT 'chat',
+  importance_score FLOAT DEFAULT 0.5,
+  topic_tags TEXT[],
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_conversations_user_id ON conversations(user_id);
-CREATE INDEX idx_conversations_status ON conversations(status);
-CREATE INDEX idx_conversations_created_at ON conversations(created_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at ON conversations(created_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_importance ON conversations(importance_score DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_topics ON conversations USING GIN(topic_tags);
 
--- =================================================================
--- 3. MESSAGES TABLE
--- =================================================================
-CREATE TABLE messages (
+-- 5. MESSAGES TABLE (Enhanced)
+CREATE TABLE IF NOT EXISTS messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE NOT NULL,
-  type VARCHAR(20) NOT NULL CHECK (type IN ('user', 'assistant', 'system')),
+  type VARCHAR(20) NOT NULL CHECK (type IN ('user', 'assistant', 'system', 'tool')),
   content TEXT NOT NULL,
   metadata JSONB DEFAULT '{}',
   tokens_used INTEGER DEFAULT 0,
   response_time_ms INTEGER,
   feedback_score INTEGER CHECK (feedback_score >= 1 AND feedback_score <= 5),
   feedback_comment TEXT,
+  brain_confidence FLOAT,
+  tools_used TEXT[],
+  memory_references UUID[],
   timestamp TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX idx_messages_type ON messages(type);
-CREATE INDEX idx_messages_timestamp ON messages(timestamp);
-CREATE INDEX idx_messages_feedback_score ON messages(feedback_score);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_type ON messages(type);
+CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+CREATE INDEX IF NOT EXISTS idx_messages_feedback_score ON messages(feedback_score);
+CREATE INDEX IF NOT EXISTS idx_messages_confidence ON messages(brain_confidence);
 
--- =================================================================
--- 4. TRAINING_DATA TABLE
--- =================================================================
-CREATE TABLE training_data (
+-- ============================================================================
+-- BRAIN MEMORY SYSTEM
+-- ============================================================================
+
+-- 6. BRAIN_MEMORIES TABLE - Episodic and Semantic Memory
+CREATE TABLE IF NOT EXISTS brain_memories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('episodic', 'semantic', 'procedural', 'conversation', 'fact', 'event')),
+  content TEXT NOT NULL,
+  summary TEXT,
+  importance FLOAT DEFAULT 0.5 CHECK (importance >= 0 AND importance <= 1),
+  confidence FLOAT DEFAULT 0.8 CHECK (confidence >= 0 AND confidence <= 1),
+  category VARCHAR(100),
+  tags TEXT[],
+  context JSONB DEFAULT '{}',
+  source_id UUID,
+  source_type VARCHAR(50),
+  embedding VECTOR(1536),
+  access_count INTEGER DEFAULT 0,
+  last_accessed TIMESTAMP,
+  expires_at TIMESTAMP,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_memories_user_id ON brain_memories(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_type ON brain_memories(type);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_importance ON brain_memories(importance DESC);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_category ON brain_memories(category);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_tags ON brain_memories USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_created_at ON brain_memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_brain_memories_source ON brain_memories(source_id, source_type);
+
+-- 7. CONTEXT_CONNECTIONS TABLE - Memory Relationships
+CREATE TABLE IF NOT EXISTS context_connections (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  source_id UUID NOT NULL,
+  target_id UUID NOT NULL,
+  source_type VARCHAR(50) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  connection_type VARCHAR(50) NOT NULL,
+  strength FLOAT DEFAULT 0.5 CHECK (strength >= 0 AND strength <= 1),
+  confidence FLOAT DEFAULT 0.8 CHECK (confidence >= 0 AND confidence <= 1),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_context_connections_user_id ON context_connections(user_id);
+CREATE INDEX IF NOT EXISTS idx_context_connections_source ON context_connections(source_id, source_type);
+CREATE INDEX IF NOT EXISTS idx_context_connections_target ON context_connections(target_id, target_type);
+CREATE INDEX IF NOT EXISTS idx_context_connections_type ON context_connections(connection_type);
+CREATE INDEX IF NOT EXISTS idx_context_connections_strength ON context_connections(strength DESC);
+
+-- ============================================================================
+-- BRAIN TOOLS SYSTEM
+-- ============================================================================
+
+-- 8. BRAIN_TOOLS TABLE - Tool Configurations
+CREATE TABLE IF NOT EXISTS brain_tools (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  tool_name VARCHAR(100) NOT NULL,
+  tool_type VARCHAR(50) NOT NULL,
+  is_enabled BOOLEAN DEFAULT false,
+  configuration JSONB DEFAULT '{}',
+  credentials_encrypted TEXT,
+  last_used TIMESTAMP,
+  usage_count INTEGER DEFAULT 0,
+  success_rate FLOAT DEFAULT 1.0,
+  average_response_time INTEGER,
+  error_count INTEGER DEFAULT 0,
+  last_error TEXT,
+  rate_limit_reset TIMESTAMP,
+  daily_usage_count INTEGER DEFAULT 0,
+  monthly_usage_count INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'inactive',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_tools_user_id ON brain_tools(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_tools_name ON brain_tools(tool_name);
+CREATE INDEX IF NOT EXISTS idx_brain_tools_type ON brain_tools(tool_type);
+CREATE INDEX IF NOT EXISTS idx_brain_tools_enabled ON brain_tools(is_enabled);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_brain_tools_user_tool ON brain_tools(user_id, tool_name);
+
+-- 9. TOOL_USAGE_LOGS TABLE - Track Tool Usage
+CREATE TABLE IF NOT EXISTS tool_usage_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  tool_id UUID REFERENCES brain_tools(id) ON DELETE CASCADE NOT NULL,
+  conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  action_type VARCHAR(100) NOT NULL,
+  request_data JSONB DEFAULT '{}',
+  response_data JSONB DEFAULT '{}',
+  execution_time_ms INTEGER,
+  success BOOLEAN NOT NULL,
+  error_message TEXT,
+  cost_credits INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_user_id ON tool_usage_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_tool_id ON tool_usage_logs(tool_id);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_success ON tool_usage_logs(success);
+CREATE INDEX IF NOT EXISTS idx_tool_usage_logs_created_at ON tool_usage_logs(created_at);
+
+-- ============================================================================
+-- LEARNING SYSTEM
+-- ============================================================================
+
+-- 10. LEARNING_PATTERNS TABLE
+CREATE TABLE IF NOT EXISTS learning_patterns (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  pattern_type VARCHAR(50) NOT NULL,
+  input_pattern TEXT NOT NULL,
+  response_pattern TEXT NOT NULL,
+  context_tags TEXT[],
+  confidence FLOAT DEFAULT 0.5 CHECK (confidence >= 0 AND confidence <= 1),
+  success_rate FLOAT DEFAULT 1.0 CHECK (success_rate >= 0 AND success_rate <= 1),
+  use_count INTEGER DEFAULT 0,
+  last_used TIMESTAMP,
+  category VARCHAR(100),
+  subcategory VARCHAR(100),
+  conditions JSONB DEFAULT '{}',
+  exceptions JSONB DEFAULT '{}',
+  learned_from TEXT,
+  validation_status VARCHAR(50) DEFAULT 'unvalidated',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_learning_patterns_user_id ON learning_patterns(user_id);
+CREATE INDEX IF NOT EXISTS idx_learning_patterns_type ON learning_patterns(pattern_type);
+CREATE INDEX IF NOT EXISTS idx_learning_patterns_confidence ON learning_patterns(confidence DESC);
+CREATE INDEX IF NOT EXISTS idx_learning_patterns_use_count ON learning_patterns(use_count DESC);
+CREATE INDEX IF NOT EXISTS idx_learning_patterns_tags ON learning_patterns USING GIN(context_tags);
+
+-- 11. PATTERN_FEEDBACK TABLE - User Feedback on AI Patterns
+CREATE TABLE IF NOT EXISTS pattern_feedback (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  pattern_id UUID REFERENCES learning_patterns(id) ON DELETE CASCADE,
+  memory_id UUID REFERENCES brain_memories(id) ON DELETE CASCADE,
+  feedback_type VARCHAR(50) NOT NULL,
+  feedback_score INTEGER CHECK (feedback_score >= 1 AND feedback_score <= 5),
+  original_response TEXT,
+  corrected_response TEXT,
+  feedback_text TEXT,
+  context JSONB DEFAULT '{}',
+  processed BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_feedback_user_id ON pattern_feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_feedback_pattern_id ON pattern_feedback(pattern_id);
+CREATE INDEX IF NOT EXISTS idx_pattern_feedback_type ON pattern_feedback(feedback_type);
+CREATE INDEX IF NOT EXISTS idx_pattern_feedback_processed ON pattern_feedback(processed);
+
+-- 12. TRAINING_DATA TABLE
+CREATE TABLE IF NOT EXISTS training_data (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   input TEXT NOT NULL,
@@ -82,20 +306,25 @@ CREATE TABLE training_data (
   tags TEXT[],
   used_in_training BOOLEAN DEFAULT false,
   training_batch_id UUID,
+  source_conversation_id UUID REFERENCES conversations(id),
+  auto_generated BOOLEAN DEFAULT false,
+  validation_status VARCHAR(50) DEFAULT 'unvalidated',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_training_data_user_id ON training_data(user_id);
-CREATE INDEX idx_training_data_category ON training_data(category);
-CREATE INDEX idx_training_data_quality_score ON training_data(quality_score);
-CREATE INDEX idx_training_data_used_in_training ON training_data(used_in_training);
+CREATE INDEX IF NOT EXISTS idx_training_data_user_id ON training_data(user_id);
+CREATE INDEX IF NOT EXISTS idx_training_data_category ON training_data(category);
+CREATE INDEX IF NOT EXISTS idx_training_data_quality_score ON training_data(quality_score);
+CREATE INDEX IF NOT EXISTS idx_training_data_used_in_training ON training_data(used_in_training);
+CREATE INDEX IF NOT EXISTS idx_training_data_validation ON training_data(validation_status);
 
--- =================================================================
--- 5. MODELS TABLE
--- =================================================================
-CREATE TABLE models (
+-- ============================================================================
+-- MODEL MANAGEMENT
+-- ============================================================================
+
+-- 13. MODELS TABLE
+CREATE TABLE IF NOT EXISTS models (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   name VARCHAR(255) NOT NULL,
@@ -111,23 +340,21 @@ CREATE TABLE models (
   performance_metrics JSONB DEFAULT '{}',
   deployment_url TEXT,
   is_active BOOLEAN DEFAULT false,
+  brain_integration BOOLEAN DEFAULT true,
+  specialization VARCHAR(100),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_models_user_id ON models(user_id);
-CREATE INDEX idx_models_status ON models(status);
-CREATE INDEX idx_models_version ON models(version);
-CREATE INDEX idx_models_is_active ON models(is_active);
+CREATE INDEX IF NOT EXISTS idx_models_user_id ON models(user_id);
+CREATE INDEX IF NOT EXISTS idx_models_status ON models(status);
+CREATE INDEX IF NOT EXISTS idx_models_version ON models(version);
+CREATE INDEX IF NOT EXISTS idx_models_is_active ON models(is_active);
+CREATE INDEX IF NOT EXISTS idx_models_brain_integration ON models(brain_integration);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_models_user_active ON models(user_id) WHERE is_active = true;
 
--- Ensure only one active model per user
-CREATE UNIQUE INDEX idx_models_user_active ON models(user_id) WHERE is_active = true;
-
--- =================================================================
--- 6. TRAINING_JOBS TABLE
--- =================================================================
-CREATE TABLE training_jobs (
+-- 14. TRAINING_JOBS TABLE
+CREATE TABLE IF NOT EXISTS training_jobs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   model_id UUID REFERENCES models(id) ON DELETE CASCADE,
@@ -144,19 +371,69 @@ CREATE TABLE training_jobs (
   error_message TEXT,
   started_at TIMESTAMP,
   completed_at TIMESTAMP,
+  brain_integration BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_training_jobs_user_id ON training_jobs(user_id);
-CREATE INDEX idx_training_jobs_status ON training_jobs(status);
-CREATE INDEX idx_training_jobs_created_at ON training_jobs(created_at);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_user_id ON training_jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_status ON training_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_created_at ON training_jobs(created_at);
 
--- =================================================================
--- 7. API_USAGE TABLE (for monitoring and billing)
--- =================================================================
-CREATE TABLE api_usage (
+-- ============================================================================
+-- ANALYTICS AND INSIGHTS
+-- ============================================================================
+
+-- 15. BRAIN_INSIGHTS TABLE - Generated Insights
+CREATE TABLE IF NOT EXISTS brain_insights (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  insight_type VARCHAR(100) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  confidence FLOAT CHECK (confidence >= 0 AND confidence <= 1),
+  importance FLOAT CHECK (importance >= 0 AND importance <= 1),
+  category VARCHAR(100),
+  data_points JSONB DEFAULT '{}',
+  action_suggestions TEXT[],
+  status VARCHAR(50) DEFAULT 'new',
+  user_feedback INTEGER CHECK (user_feedback >= 1 AND user_feedback <= 5),
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_insights_user_id ON brain_insights(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_insights_type ON brain_insights(insight_type);
+CREATE INDEX IF NOT EXISTS idx_brain_insights_importance ON brain_insights(importance DESC);
+CREATE INDEX IF NOT EXISTS idx_brain_insights_status ON brain_insights(status);
+
+-- 16. BRAIN_SESSIONS TABLE - Track Sessions
+CREATE TABLE IF NOT EXISTS brain_sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  session_type VARCHAR(50) DEFAULT 'conversation',
+  start_time TIMESTAMP DEFAULT NOW(),
+  end_time TIMESTAMP,
+  duration_minutes INTEGER,
+  message_count INTEGER DEFAULT 0,
+  tools_used TEXT[],
+  memories_created INTEGER DEFAULT 0,
+  memories_accessed INTEGER DEFAULT 0,
+  insights_generated INTEGER DEFAULT 0,
+  user_satisfaction INTEGER CHECK (user_satisfaction >= 1 AND user_satisfaction <= 5),
+  session_summary TEXT,
+  key_topics TEXT[],
+  session_metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_sessions_user_id ON brain_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_sessions_type ON brain_sessions(session_type);
+CREATE INDEX IF NOT EXISTS idx_brain_sessions_start_time ON brain_sessions(start_time DESC);
+
+-- 17. API_USAGE TABLE
+CREATE TABLE IF NOT EXISTS api_usage (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   endpoint VARCHAR(255) NOT NULL,
@@ -168,66 +445,45 @@ CREATE TABLE api_usage (
   user_agent TEXT,
   request_id UUID,
   error_message TEXT,
+  brain_feature_used VARCHAR(100),
+  tool_interactions INTEGER DEFAULT 0,
+  memory_operations INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_api_usage_user_id ON api_usage(user_id);
-CREATE INDEX idx_api_usage_endpoint ON api_usage(endpoint);
-CREATE INDEX idx_api_usage_created_at ON api_usage(created_at);
-CREATE INDEX idx_api_usage_status_code ON api_usage(status_code);
+CREATE INDEX IF NOT EXISTS idx_api_usage_user_id ON api_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_usage_endpoint ON api_usage(endpoint);
+CREATE INDEX IF NOT EXISTS idx_api_usage_created_at ON api_usage(created_at);
+CREATE INDEX IF NOT EXISTS idx_api_usage_status_code ON api_usage(status_code);
+CREATE INDEX IF NOT EXISTS idx_api_usage_brain_feature ON api_usage(brain_feature_used);
 
--- =================================================================
--- 8. USER_PREFERENCES TABLE
--- =================================================================
-CREATE TABLE user_preferences (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE NOT NULL,
-  ai_personality VARCHAR(100) DEFAULT 'helpful',
-  response_style VARCHAR(100) DEFAULT 'balanced',
-  language VARCHAR(10) DEFAULT 'en',
-  max_response_length INTEGER DEFAULT 500,
-  enable_context_memory BOOLEAN DEFAULT true,
-  enable_training_data_collection BOOLEAN DEFAULT true,
-  enable_analytics BOOLEAN DEFAULT true,
-  custom_instructions TEXT,
-  preferences JSONB DEFAULT '{}',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Add index
-CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
-
--- =================================================================
--- 9. FEEDBACK TABLE
--- =================================================================
-CREATE TABLE feedback (
+-- 18. FEEDBACK TABLE
+CREATE TABLE IF NOT EXISTS feedback (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL CHECK (type IN ('rating', 'correction', 'suggestion', 'bug_report')),
+  brain_session_id UUID REFERENCES brain_sessions(id) ON DELETE SET NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('rating', 'correction', 'suggestion', 'bug_report', 'brain_feedback')),
   rating INTEGER CHECK (rating >= 1 AND rating <= 5),
   comment TEXT,
   suggested_response TEXT,
   metadata JSONB DEFAULT '{}',
   is_processed BOOLEAN DEFAULT false,
   admin_response TEXT,
+  affects_learning BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_feedback_user_id ON feedback(user_id);
-CREATE INDEX idx_feedback_type ON feedback(type);
-CREATE INDEX idx_feedback_rating ON feedback(rating);
-CREATE INDEX idx_feedback_is_processed ON feedback(is_processed);
+CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(type);
+CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback(rating);
+CREATE INDEX IF NOT EXISTS idx_feedback_is_processed ON feedback(is_processed);
+CREATE INDEX IF NOT EXISTS idx_feedback_affects_learning ON feedback(affects_learning);
 
--- =================================================================
--- 10. SYSTEM_LOGS TABLE (for debugging and monitoring)
--- =================================================================
-CREATE TABLE system_logs (
+-- 19. SYSTEM_LOGS TABLE
+CREATE TABLE IF NOT EXISTS system_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   level VARCHAR(20) NOT NULL CHECK (level IN ('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL')),
   service VARCHAR(100) NOT NULL,
@@ -236,18 +492,20 @@ CREATE TABLE system_logs (
   request_id UUID,
   metadata JSONB DEFAULT '{}',
   stack_trace TEXT,
+  brain_component VARCHAR(100),
+  session_id UUID,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add indexes
-CREATE INDEX idx_system_logs_level ON system_logs(level);
-CREATE INDEX idx_system_logs_service ON system_logs(service);
-CREATE INDEX idx_system_logs_created_at ON system_logs(created_at);
-CREATE INDEX idx_system_logs_user_id ON system_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
+CREATE INDEX IF NOT EXISTS idx_system_logs_service ON system_logs(service);
+CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_system_logs_user_id ON system_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_system_logs_brain_component ON system_logs(brain_component);
 
--- =================================================================
+-- ============================================================================
 -- FUNCTIONS AND TRIGGERS
--- =================================================================
+-- ============================================================================
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -258,43 +516,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply updated_at triggers to relevant tables
-CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_conversations_updated_at
-    BEFORE UPDATE ON conversations
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_training_data_updated_at
-    BEFORE UPDATE ON training_data
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_models_updated_at
-    BEFORE UPDATE ON models
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_training_jobs_updated_at
-    BEFORE UPDATE ON training_jobs
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_preferences_updated_at
-    BEFORE UPDATE ON user_preferences
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_feedback_updated_at
-    BEFORE UPDATE ON feedback
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Function to update conversation message count and last message time
+-- Function to update conversation statistics
 CREATE OR REPLACE FUNCTION update_conversation_stats()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -318,102 +540,155 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply trigger to messages table
-CREATE TRIGGER update_conversation_stats_on_message
-    AFTER INSERT OR DELETE ON messages
-    FOR EACH ROW
-    EXECUTE FUNCTION update_conversation_stats();
+-- Function to update brain statistics
+CREATE OR REPLACE FUNCTION update_brain_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO brain_profile (user_id, last_interaction, total_interactions)
+    VALUES (NEW.user_id, NOW(), 1)
+    ON CONFLICT (user_id) 
+    DO UPDATE SET 
+        last_interaction = NOW(),
+        total_interactions = brain_profile.total_interactions + 1,
+        updated_at = NOW();
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- =================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- =================================================================
+-- Function to setup default brain tools for new users
+CREATE OR REPLACE FUNCTION setup_default_brain_tools(target_user_id UUID)
+RETURNS void AS $$
+BEGIN
+    -- Insert default brain tools
+    INSERT INTO brain_tools (user_id, tool_name, tool_type, is_enabled, configuration) VALUES
+    (target_user_id, 'memory_search', 'cognitive', true, '{"max_results": 10, "similarity_threshold": 0.7}'),
+    (target_user_id, 'google_calendar', 'productivity', false, '{"default_duration": 60, "reminder_minutes": 15}'),
+    (target_user_id, 'google_sheets', 'productivity', false, '{"default_sheet_name": "AI Brain Data"}'),
+    (target_user_id, 'notion', 'knowledge', false, '{"default_database": "AI Notes"}'),
+    (target_user_id, 'slack', 'communication', false, '{"default_channel": "general"}'),
+    (target_user_id, 'web_search', 'research', false, '{"max_results": 5, "safe_search": true}'),
+    (target_user_id, 'code_interpreter', 'analysis', false, '{"timeout_seconds": 30}')
+    ON CONFLICT (user_id, tool_name) DO NOTHING;
+    
+    -- Create default brain profile
+    INSERT INTO brain_profile (user_id) VALUES (target_user_id)
+    ON CONFLICT (user_id) DO NOTHING;
+    
+    -- Create default user preferences
+    INSERT INTO user_preferences (user_id) VALUES (target_user_id)
+    ON CONFLICT (user_id) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
 
--- Enable RLS on all user-specific tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE training_data ENABLE ROW LEVEL SECURITY;
-ALTER TABLE models ENABLE ROW LEVEL SECURITY;
-ALTER TABLE training_jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+-- Function to setup brain for new users
+CREATE OR REPLACE FUNCTION setup_new_user_brain()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM setup_default_brain_tools(NEW.id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create policies (these are examples - adjust based on your auth setup)
--- Users can only see their own data
-CREATE POLICY "Users can view own profile" ON users
-    FOR SELECT USING (auth.uid()::text = id::text);
+-- Function to check brain health
+CREATE OR REPLACE FUNCTION check_brain_health(target_user_id UUID)
+RETURNS TABLE(
+    status TEXT,
+    total_memories INTEGER,
+    avg_importance FLOAT,
+    recent_learning_activity BOOLEAN,
+    tool_usage_last_7_days INTEGER,
+    recommendations TEXT[]
+) AS $$
+DECLARE
+    memory_count INTEGER;
+    avg_imp FLOAT;
+    recent_activity BOOLEAN;
+    tool_usage INTEGER;
+    recommendations TEXT[] := ARRAY[]::TEXT[];
+BEGIN
+    -- Get memory statistics
+    SELECT COUNT(*), AVG(importance)
+    INTO memory_count, avg_imp
+    FROM brain_memories 
+    WHERE user_id = target_user_id;
+    
+    -- Check recent learning activity
+    SELECT EXISTS(
+        SELECT 1 FROM brain_memories 
+        WHERE user_id = target_user_id 
+        AND created_at > NOW() - INTERVAL '7 days'
+    ) INTO recent_activity;
+    
+    -- Get tool usage
+    SELECT COUNT(*)
+    INTO tool_usage
+    FROM tool_usage_logs 
+    WHERE user_id = target_user_id 
+    AND created_at > NOW() - INTERVAL '7 days';
+    
+    -- Generate recommendations
+    IF memory_count < 10 THEN
+        recommendations := array_append(recommendations, 'Start more conversations to build memory');
+    END IF;
+    
+    IF avg_imp < 0.3 THEN
+        recommendations := array_append(recommendations, 'Focus on more meaningful interactions');
+    END IF;
+    
+    IF NOT recent_activity THEN
+        recommendations := array_append(recommendations, 'Engage with your AI brain more frequently');
+    END IF;
+    
+    IF tool_usage = 0 THEN
+        recommendations := array_append(recommendations, 'Consider enabling and using productivity tools');
+    END IF;
+    
+    -- Determine status
+    RETURN QUERY SELECT
+        CASE 
+            WHEN memory_count > 100 AND avg_imp > 0.7 THEN 'excellent'
+            WHEN memory_count > 50 AND avg_imp > 0.5 THEN 'good'
+            WHEN memory_count > 10 AND avg_imp > 0.3 THEN 'developing'
+            ELSE 'beginning'
+        END,
+        memory_count,
+        COALESCE(avg_imp, 0.0),
+        recent_activity,
+        tool_usage,
+        recommendations;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE POLICY "Users can update own profile" ON users
-    FOR UPDATE USING (auth.uid()::text = id::text);
+-- Function to decay memory importance over time
+CREATE OR REPLACE FUNCTION decay_memory_importance()
+RETURNS void AS $$
+BEGIN
+    UPDATE brain_memories 
+    SET 
+        importance = GREATEST(0.1, importance * 0.99),
+        updated_at = NOW()
+    WHERE 
+        last_accessed < NOW() - INTERVAL '30 days' 
+        AND importance > 0.1;
+END;
+$$ LANGUAGE plpgsql;
 
--- Users can only access their own conversations
-CREATE POLICY "Users can view own conversations" ON conversations
-    FOR ALL USING (auth.uid()::text = user_id::text);
+-- Function to clean expired memories
+CREATE OR REPLACE FUNCTION cleanup_expired_memories()
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM brain_memories 
+    WHERE expires_at IS NOT NULL AND expires_at < NOW();
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
 
--- Users can only access their own messages
-CREATE POLICY "Users can view own messages" ON messages
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM conversations 
-            WHERE conversations.id = messages.conversation_id 
-            AND conversations.user_id::text = auth.uid()::text
-        )
-    );
-
--- Similar policies for other tables...
-CREATE POLICY "Users can view own training data" ON training_data
-    FOR ALL USING (auth.uid()::text = user_id::text);
-
-CREATE POLICY "Users can view own models" ON models
-    FOR ALL USING (auth.uid()::text = user_id::text);
-
--- =================================================================
--- SAMPLE DATA (Optional - for testing)
--- =================================================================
-
--- Insert sample user (remove in production)
--- INSERT INTO users (email, password, first_name, last_name) 
--- VALUES ('demo@example.com', '$2b$12$demo_hashed_password', 'Demo', 'User');
-
--- =================================================================
--- VIEWS FOR ANALYTICS (Optional)
--- =================================================================
-
--- View for user activity summary
-CREATE VIEW user_activity_summary AS
-SELECT 
-    u.id,
-    u.email,
-    u.created_at as user_since,
-    COUNT(DISTINCT c.id) as total_conversations,
-    COUNT(DISTINCT m.id) as total_messages,
-    COUNT(DISTINCT td.id) as training_examples,
-    COUNT(DISTINCT mo.id) as models_created,
-    MAX(m.timestamp) as last_activity
-FROM users u
-LEFT JOIN conversations c ON u.id = c.user_id
-LEFT JOIN messages m ON c.id = m.conversation_id
-LEFT JOIN training_data td ON u.id = td.user_id
-LEFT JOIN models mo ON u.id = mo.user_id
-GROUP BY u.id, u.email, u.created_at;
-
--- View for model performance metrics
-CREATE VIEW model_performance AS
-SELECT 
-    m.*,
-    u.email as user_email,
-    COUNT(td.id) as training_examples_used
-FROM models m
-JOIN users u ON m.user_id = u.id
-LEFT JOIN training_data td ON m.user_id = td.user_id AND td.used_in_training = true
-GROUP BY m.id, u.email;
-
--- =================================================================
--- CLEANUP FUNCTIONS (Optional)
--- =================================================================
-
--- Function to cleanup old logs (run periodically)
+-- Function to cleanup old logs
 CREATE OR REPLACE FUNCTION cleanup_old_logs(days_to_keep INTEGER DEFAULT 30)
 RETURNS INTEGER AS $$
 DECLARE
@@ -441,22 +716,475 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- =================================================================
--- COMMENTS FOR DOCUMENTATION
--- =================================================================
 
-COMMENT ON TABLE users IS 'Stores user account information and authentication data';
-COMMENT ON TABLE conversations IS 'Stores chat conversations between users and AI';
-COMMENT ON TABLE messages IS 'Individual messages within conversations';
+-- ============================================================================
+-- TRIGGERS
+-- ============================================================================
+
+-- Drop existing triggers if they exist to avoid conflicts
+DO $
+BEGIN
+    DROP TRIGGER IF EXISTS update_conversation_stats_on_message ON messages;
+    DROP TRIGGER IF EXISTS update_brain_stats_on_message ON messages;
+    DROP TRIGGER IF EXISTS setup_brain_on_user_creation ON users;
+    DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+    DROP TRIGGER IF EXISTS update_brain_profile_updated_at ON brain_profile;
+    DROP TRIGGER IF EXISTS update_user_preferences_updated_at ON user_preferences;
+    DROP TRIGGER IF EXISTS update_conversations_updated_at ON conversations;
+    DROP TRIGGER IF EXISTS update_brain_memories_updated_at ON brain_memories;
+    DROP TRIGGER IF EXISTS update_brain_tools_updated_at ON brain_tools;
+    DROP TRIGGER IF EXISTS update_learning_patterns_updated_at ON learning_patterns;
+    DROP TRIGGER IF EXISTS update_training_data_updated_at ON training_data;
+    DROP TRIGGER IF EXISTS update_models_updated_at ON models;
+    DROP TRIGGER IF EXISTS update_training_jobs_updated_at ON training_jobs;
+    DROP TRIGGER IF EXISTS update_brain_insights_updated_at ON brain_insights;
+    DROP TRIGGER IF EXISTS update_feedback_updated_at ON feedback;
+EXCEPTION
+    WHEN undefined_object THEN NULL;
+END
+$;
+
+-- Create triggers
+CREATE TRIGGER update_conversation_stats_on_message
+    AFTER INSERT OR DELETE ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_stats();
+
+CREATE TRIGGER update_brain_stats_on_message
+    AFTER INSERT ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_brain_stats();
+
+CREATE TRIGGER setup_brain_on_user_creation
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION setup_new_user_brain();
+
+-- Updated_at triggers
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_brain_profile_updated_at
+    BEFORE UPDATE ON brain_profile
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_preferences_updated_at
+    BEFORE UPDATE ON user_preferences
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_conversations_updated_at
+    BEFORE UPDATE ON conversations
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_brain_memories_updated_at
+    BEFORE UPDATE ON brain_memories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_brain_tools_updated_at
+    BEFORE UPDATE ON brain_tools
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_learning_patterns_updated_at
+    BEFORE UPDATE ON learning_patterns
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_training_data_updated_at
+    BEFORE UPDATE ON training_data
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_models_updated_at
+    BEFORE UPDATE ON models
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_training_jobs_updated_at
+    BEFORE UPDATE ON training_jobs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_brain_insights_updated_at
+    BEFORE UPDATE ON brain_insights
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_feedback_updated_at
+    BEFORE UPDATE ON feedback
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- ANALYTICS VIEWS
+-- ============================================================================
+
+-- Enhanced user activity summary
+CREATE OR REPLACE VIEW user_activity_summary AS
+SELECT 
+    u.id,
+    u.email,
+    u.created_at as user_since,
+    u.brain_enabled,
+    bp.brain_name,
+    bp.total_interactions,
+    bp.last_interaction,
+    COUNT(DISTINCT c.id) as total_conversations,
+    COUNT(DISTINCT m.id) as total_messages,
+    COUNT(DISTINCT td.id) as training_examples,
+    COUNT(DISTINCT mo.id) as models_created,
+    COUNT(DISTINCT bm.id) as brain_memories,
+    COUNT(DISTINCT bs.id) as brain_sessions,
+    MAX(m.timestamp) as last_activity
+FROM users u
+LEFT JOIN brain_profile bp ON u.id = bp.user_id
+LEFT JOIN conversations c ON u.id = c.user_id
+LEFT JOIN messages m ON c.id = m.conversation_id
+LEFT JOIN training_data td ON u.id = td.user_id
+LEFT JOIN models mo ON u.id = mo.user_id
+LEFT JOIN brain_memories bm ON u.id = bm.user_id
+LEFT JOIN brain_sessions bs ON u.id = bs.user_id
+GROUP BY u.id, u.email, u.created_at, u.brain_enabled, bp.brain_name, bp.total_interactions, bp.last_interaction;
+
+-- Brain memory analytics
+CREATE OR REPLACE VIEW brain_memory_analytics AS
+SELECT 
+    bm.user_id,
+    COUNT(*) as total_memories,
+    AVG(bm.importance) as avg_importance,
+    COUNT(*) FILTER (WHERE bm.type = 'episodic') as episodic_memories,
+    COUNT(*) FILTER (WHERE bm.type = 'semantic') as semantic_memories,
+    COUNT(*) FILTER (WHERE bm.created_at > NOW() - INTERVAL '7 days') as recent_memories,
+    COUNT(*) FILTER (WHERE bm.access_count > 5) as frequently_accessed,
+    MAX(bm.created_at) as last_memory_created,
+    MAX(bm.last_accessed) as last_memory_accessed
+FROM brain_memories bm
+GROUP BY bm.user_id;
+
+-- Brain tool analytics
+CREATE OR REPLACE VIEW brain_tool_analytics AS
+SELECT 
+    bt.user_id,
+    bt.tool_name,
+    bt.tool_type,
+    bt.is_enabled,
+    bt.usage_count,
+    bt.success_rate,
+    bt.average_response_time,
+    COUNT(tul.*) as total_executions,
+    COUNT(*) FILTER (WHERE tul.success = true) as successful_executions,
+    AVG(tul.execution_time_ms) as avg_execution_time,
+    MAX(tul.created_at) as last_used
+FROM brain_tools bt
+LEFT JOIN tool_usage_logs tul ON bt.id = tul.tool_id
+GROUP BY bt.id, bt.user_id, bt.tool_name, bt.tool_type, bt.is_enabled, bt.usage_count, bt.success_rate, bt.average_response_time;
+
+-- Brain learning progress
+CREATE OR REPLACE VIEW brain_learning_progress AS
+SELECT 
+    bp.user_id,
+    bp.brain_name,
+    bp.total_interactions,
+    bp.last_interaction,
+    bp.brain_state,
+    bma.total_memories,
+    bma.avg_importance,
+    COUNT(lp.*) as learned_patterns,
+    COUNT(*) FILTER (WHERE lp.confidence > 0.7) as confident_patterns,
+    COUNT(bi.*) as insights_generated,
+    COUNT(*) FILTER (WHERE bi.status = 'implemented') as insights_implemented
+FROM brain_profile bp
+LEFT JOIN brain_memory_analytics bma ON bp.user_id = bma.user_id
+LEFT JOIN learning_patterns lp ON bp.user_id = lp.user_id
+LEFT JOIN brain_insights bi ON bp.user_id = bi.user_id
+GROUP BY bp.user_id, bp.brain_name, bp.total_interactions, bp.last_interaction, bp.brain_state, 
+         bma.total_memories, bma.avg_importance;
+
+-- Model performance metrics
+CREATE OR REPLACE VIEW model_performance AS
+SELECT 
+    m.*,
+    u.email as user_email,
+    COUNT(td.id) as training_examples_used,
+    bp.brain_name
+FROM models m
+JOIN users u ON m.user_id = u.id
+LEFT JOIN brain_profile bp ON m.user_id = bp.user_id
+LEFT JOIN training_data td ON m.user_id = td.user_id AND td.used_in_training = true
+GROUP BY m.id, u.email, bp.brain_name;
+
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================================================
+
+-- Enable RLS on all user-specific tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_tools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tool_usage_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_insights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE learning_patterns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brain_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE context_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pattern_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE training_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+ALTER TABLE training_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies to avoid conflicts
+DO $
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN (
+        SELECT schemaname, tablename, policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public'
+    ) LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', pol.policyname, pol.schemaname, pol.tablename);
+    END LOOP;
+END
+$;
+
+-- Create RLS policies (customize based on your auth system)
+CREATE POLICY "Users can view own data" ON users
+    FOR SELECT USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can update own data" ON users
+    FOR UPDATE USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can view own conversations" ON conversations
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own messages" ON messages
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM conversations 
+            WHERE conversations.id = messages.conversation_id 
+            AND conversations.user_id::text = auth.uid()::text
+        )
+    );
+
+CREATE POLICY "Users can view own brain profile" ON brain_profile
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own brain memories" ON brain_memories
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own brain tools" ON brain_tools
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own tool usage logs" ON tool_usage_logs
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own brain insights" ON brain_insights
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own learning patterns" ON learning_patterns
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own brain sessions" ON brain_sessions
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own context connections" ON context_connections
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own pattern feedback" ON pattern_feedback
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own training data" ON training_data
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own models" ON models
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own training jobs" ON training_jobs
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own preferences" ON user_preferences
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own api usage" ON api_usage
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can view own feedback" ON feedback
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+-- ============================================================================
+-- COMMENTS FOR DOCUMENTATION
+-- ============================================================================
+
+COMMENT ON TABLE users IS 'Enhanced user accounts with brain feature toggles';
+COMMENT ON TABLE brain_profile IS 'User brain configuration, personality, and learning preferences';
+COMMENT ON TABLE user_preferences IS 'User-specific AI behavior and interface preferences';
+COMMENT ON TABLE conversations IS 'Chat conversations with brain session integration';
+COMMENT ON TABLE messages IS 'Individual messages with brain confidence and tool tracking';
+COMMENT ON TABLE brain_memories IS 'Episodic and semantic memories with vector embeddings for semantic search';
+COMMENT ON TABLE context_connections IS 'Relationships and connections between memories and concepts';
+COMMENT ON TABLE brain_tools IS 'Available tools and their configurations for each user brain';
+COMMENT ON TABLE tool_usage_logs IS 'Detailed logs of tool usage for analytics and debugging';
+COMMENT ON TABLE learning_patterns IS 'Enhanced learning patterns with validation and context';
+COMMENT ON TABLE pattern_feedback IS 'User feedback on AI responses for continuous learning';
 COMMENT ON TABLE training_data IS 'Data used to train and improve AI models';
 COMMENT ON TABLE models IS 'AI model versions and configurations';
 COMMENT ON TABLE training_jobs IS 'Tracks model training job status and progress';
-COMMENT ON TABLE api_usage IS 'Logs API calls for monitoring and billing';
-COMMENT ON TABLE user_preferences IS 'User-specific AI behavior and interface preferences';
+COMMENT ON TABLE brain_insights IS 'AI-generated insights and recommendations based on user patterns';
+COMMENT ON TABLE brain_sessions IS 'Tracks user interaction sessions for analytics';
+COMMENT ON TABLE api_usage IS 'Logs API calls for monitoring and billing with brain features';
 COMMENT ON TABLE feedback IS 'User feedback on AI responses and system functionality';
 COMMENT ON TABLE system_logs IS 'System-wide logging for debugging and monitoring';
 
--- =================================================================
--- COMPLETED! 
--- Your database schema is now ready for production use.
--- =================================================================
+-- ============================================================================
+-- MAINTENANCE SCHEDULE SETUP
+-- ============================================================================
+
+-- Create a simple maintenance log table
+CREATE TABLE IF NOT EXISTS maintenance_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  operation VARCHAR(100) NOT NULL,
+  records_affected INTEGER DEFAULT 0,
+  execution_time_ms INTEGER,
+  status VARCHAR(20) DEFAULT 'success',
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Function to run maintenance tasks
+CREATE OR REPLACE FUNCTION run_maintenance_tasks()
+RETURNS TABLE(
+    operation TEXT,
+    records_affected INTEGER,
+    status TEXT
+) AS $
+DECLARE
+    logs_cleaned INTEGER;
+    api_usage_cleaned INTEGER;
+    memories_cleaned INTEGER;
+    start_time TIMESTAMP;
+    end_time TIMESTAMP;
+BEGIN
+    start_time := NOW();
+    
+    -- Clean old logs (keep last 30 days)
+    SELECT cleanup_old_logs(30) INTO logs_cleaned;
+    
+    -- Clean old API usage (keep last 90 days)
+    SELECT cleanup_old_api_usage(90) INTO api_usage_cleaned;
+    
+    -- Clean expired memories
+    SELECT cleanup_expired_memories() INTO memories_cleaned;
+    
+    -- Decay memory importance
+    PERFORM decay_memory_importance();
+    
+    end_time := NOW();
+    
+    -- Log maintenance run
+    INSERT INTO maintenance_log (operation, records_affected, execution_time_ms)
+    VALUES 
+        ('cleanup_logs', logs_cleaned, EXTRACT(EPOCH FROM (end_time - start_time)) * 1000),
+        ('cleanup_api_usage', api_usage_cleaned, EXTRACT(EPOCH FROM (end_time - start_time)) * 1000),
+        ('cleanup_memories', memories_cleaned, EXTRACT(EPOCH FROM (end_time - start_time)) * 1000);
+    
+    -- Return results
+    RETURN QUERY VALUES
+        ('logs_cleaned', logs_cleaned, 'success'),
+        ('api_usage_cleaned', api_usage_cleaned, 'success'),
+        ('memories_cleaned', memories_cleaned, 'success'),
+        ('memory_decay', 0, 'success');
+END;
+$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- FINAL SETUP AND VALIDATION
+-- ============================================================================
+
+-- Validate schema installation
+DO $
+DECLARE
+    table_count INTEGER;
+    function_count INTEGER;
+    trigger_count INTEGER;
+    view_count INTEGER;
+BEGIN
+    -- Count tables
+    SELECT COUNT(*) INTO table_count
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_name IN (
+        'users', 'brain_profile', 'user_preferences', 'conversations', 'messages',
+        'brain_memories', 'context_connections', 'brain_tools', 'tool_usage_logs',
+        'learning_patterns', 'pattern_feedback', 'training_data', 'models',
+        'training_jobs', 'brain_insights', 'brain_sessions', 'api_usage',
+        'feedback', 'system_logs', 'maintenance_log'
+    );
+    
+    -- Count functions
+    SELECT COUNT(*) INTO function_count
+    FROM information_schema.routines
+    WHERE routine_schema = 'public'
+    AND routine_name IN (
+        'update_updated_at_column', 'update_conversation_stats', 'update_brain_stats',
+        'setup_default_brain_tools', 'setup_new_user_brain', 'check_brain_health',
+        'decay_memory_importance', 'cleanup_expired_memories', 'cleanup_old_logs',
+        'cleanup_old_api_usage', 'run_maintenance_tasks'
+    );
+    
+    -- Count triggers
+    SELECT COUNT(*) INTO trigger_count
+    FROM information_schema.triggers
+    WHERE trigger_schema = 'public';
+    
+    -- Count views
+    SELECT COUNT(*) INTO view_count
+    FROM information_schema.views
+    WHERE table_schema = 'public'
+    AND table_name IN (
+        'user_activity_summary', 'brain_memory_analytics', 'brain_tool_analytics',
+        'brain_learning_progress', 'model_performance'
+    );
+    
+    -- Log results
+    RAISE NOTICE '============================================================================';
+    RAISE NOTICE 'AI BRAIN DATABASE SCHEMA INSTALLATION COMPLETE!';
+    RAISE NOTICE '============================================================================';
+    RAISE NOTICE '';
+    RAISE NOTICE 'INSTALLATION SUMMARY:';
+    RAISE NOTICE '✅ Tables created: % / 20', table_count;
+    RAISE NOTICE '✅ Functions created: % / 11', function_count;
+    RAISE NOTICE '✅ Triggers created: %', trigger_count;
+    RAISE NOTICE '✅ Views created: % / 5', view_count;
+    RAISE NOTICE '';
+    RAISE NOTICE 'CORE FEATURES INSTALLED:';
+    RAISE NOTICE '🧠 Advanced memory system with vector embeddings';
+    RAISE NOTICE '🔧 Tool integration framework (Slack, Google Sheets, Notion)';
+    RAISE NOTICE '📚 Learning pattern recognition and validation';
+    RAISE NOTICE '📊 Brain health monitoring and insights';
+    RAISE NOTICE '🔄 User feedback integration for continuous learning';
+    RAISE NOTICE '📈 Session tracking and comprehensive analytics';
+    RAISE NOTICE '🔒 Row-level security for data protection';
+    RAISE NOTICE '🧹 Automated maintenance and cleanup functions';
+    RAISE NOTICE '';
+    RAISE NOTICE 'NEXT STEPS:';
+    RAISE NOTICE '1. Set up environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, OPENAI_API_KEY)';
+    RAISE NOTICE '2. Deploy the brain API endpoints to Vercel';
+    RAISE NOTICE '3. Configure tool integrations (Slack, Google, Notion APIs)';
+    RAISE NOTICE '4. Test the system with the provided test interface';
+    RAISE NOTICE '5. Set up periodic maintenance: SELECT run_maintenance_tasks();';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Your AI brain is ready to learn, remember, and grow! 🚀';
+    RAISE NOTICE '============================================================================';
+END
+$;
