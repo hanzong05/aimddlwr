@@ -59,11 +59,38 @@ async function startTraining(req, res, userId) {
   if (dataError) throw dataError;
 
   if (!trainingData || trainingData.length < 5) {
-    return res.status(400).json({ 
-      error: 'Need at least 5 quality training examples',
-      currentCount: trainingData?.length || 0,
-      suggestion: 'Use auto-learning to collect more training data'
-    });
+    console.log(`Training data check - Found ${trainingData?.length || 0} examples`);
+    
+    // Auto-create sample training data if none exists
+    if (!trainingData || trainingData.length === 0) {
+      await createSampleTrainingData(userId);
+      
+      // Re-fetch training data
+      const { data: newTrainingData, error: newDataError } = await supabase
+        .from('training_data')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('used_in_training', false)
+        .gte('quality_score', 3.0)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      
+      if (newDataError) throw newDataError;
+      
+      if (newTrainingData && newTrainingData.length >= 5) {
+        console.log(`Created ${newTrainingData.length} sample training examples`);
+        // Use the new training data
+        trainingData = newTrainingData;
+      }
+    }
+    
+    if (!trainingData || trainingData.length < 5) {
+      return res.status(400).json({ 
+        error: 'Need at least 5 quality training examples',
+        currentCount: trainingData?.length || 0,
+        suggestion: 'Use auto-learning to collect more training data or sample data has been created'
+      });
+    }
   }
 
   // Check for existing active training job
@@ -243,6 +270,94 @@ function getBaseAccuracy(specialization) {
   };
   
   return baseAccuracies[specialization] || 0.72;
+}
+
+async function createSampleTrainingData(userId) {
+  console.log('Creating sample training data for user:', userId);
+  
+  const sampleData = [
+    {
+      input: "How do I create a React component?",
+      output: "To create a React component, you can use function syntax:\n\n```jsx\nfunction MyComponent() {\n  return <div>Hello World</div>;\n}\n\nexport default MyComponent;\n```\n\nOr using arrow function:\n\n```jsx\nconst MyComponent = () => {\n  return <div>Hello World</div>;\n};\n\nexport default MyComponent;\n```",
+      category: "react",
+      quality_score: 4.2,
+      tags: ["react", "components", "javascript"]
+    },
+    {
+      input: "How to handle async operations in JavaScript?",
+      output: "You can handle async operations using async/await:\n\n```javascript\nasync function fetchData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n```\n\nOr using Promises:\n\n```javascript\nfetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error));\n```",
+      category: "javascript",
+      quality_score: 4.5,
+      tags: ["javascript", "async", "promises"]
+    },
+    {
+      input: "What is the difference between let, const, and var?",
+      output: "The main differences are:\n\n**var:**\n- Function-scoped\n- Can be redeclared\n- Hoisted\n\n**let:**\n- Block-scoped\n- Cannot be redeclared in same scope\n- Hoisted but not initialized\n\n**const:**\n- Block-scoped\n- Cannot be redeclared or reassigned\n- Must be initialized\n\n```javascript\nvar x = 1;    // Function scoped\nlet y = 2;    // Block scoped\nconst z = 3;  // Block scoped, immutable\n```",
+      category: "javascript",
+      quality_score: 4.3,
+      tags: ["javascript", "variables", "scope"]
+    },
+    {
+      input: "How to connect to a database in Node.js?",
+      output: "Here's how to connect to different databases:\n\n**MongoDB with Mongoose:**\n```javascript\nconst mongoose = require('mongoose');\n\nmongoose.connect('mongodb://localhost:27017/myapp', {\n  useNewUrlParser: true,\n  useUnifiedTopology: true\n});\n```\n\n**PostgreSQL with pg:**\n```javascript\nconst { Client } = require('pg');\n\nconst client = new Client({\n  host: 'localhost',\n  database: 'myapp',\n  user: 'username',\n  password: 'password'\n});\n\nclient.connect();\n```",
+      category: "nodejs",
+      quality_score: 4.1,
+      tags: ["nodejs", "database", "mongodb", "postgresql"]
+    },
+    {
+      input: "How to handle errors in Express.js?",
+      output: "Error handling in Express.js:\n\n**Basic error middleware:**\n```javascript\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).send('Something broke!');\n});\n```\n\n**Try-catch with async/await:**\n```javascript\napp.get('/api/data', async (req, res, next) => {\n  try {\n    const data = await fetchData();\n    res.json(data);\n  } catch (error) {\n    next(error);\n  }\n});\n```\n\n**Custom error handler:**\n```javascript\nconst errorHandler = (err, req, res, next) => {\n  const { statusCode = 500, message } = err;\n  res.status(statusCode).json({ error: message });\n};\n```",
+      category: "nodejs",
+      quality_score: 4.4,
+      tags: ["nodejs", "express", "error-handling"]
+    },
+    {
+      input: "How to style components in React?",
+      output: "Several ways to style React components:\n\n**CSS Modules:**\n```jsx\nimport styles from './Button.module.css';\n\nfunction Button() {\n  return <button className={styles.primary}>Click me</button>;\n}\n```\n\n**Styled Components:**\n```jsx\nimport styled from 'styled-components';\n\nconst StyledButton = styled.button`\n  background: blue;\n  color: white;\n  padding: 10px;\n`;\n```\n\n**Inline styles:**\n```jsx\nfunction Button() {\n  const buttonStyle = { backgroundColor: 'blue', color: 'white' };\n  return <button style={buttonStyle}>Click me</button>;\n}\n```",
+      category: "react",
+      quality_score: 4.0,
+      tags: ["react", "css", "styling"]
+    },
+    {
+      input: "How to deploy a Node.js app to production?",
+      output: "Steps to deploy Node.js to production:\n\n**Using PM2:**\n```bash\nnpm install -g pm2\npm2 start app.js --name \"my-app\"\npm2 startup\npm2 save\n```\n\n**Environment setup:**\n```bash\nexport NODE_ENV=production\nnpm install --production\n```\n\n**Docker deployment:**\n```dockerfile\nFROM node:16-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"app.js\"]\n```\n\n**Nginx reverse proxy:**\n```nginx\nserver {\n  listen 80;\n  location / {\n    proxy_pass http://localhost:3000;\n  }\n}\n```",
+      category: "deployment",
+      quality_score: 4.6,
+      tags: ["nodejs", "deployment", "pm2", "docker", "nginx"]
+    }
+  ];
+
+  const trainingRecords = sampleData.map(item => ({
+    user_id: userId,
+    input: item.input,
+    output: item.output,
+    category: item.category,
+    quality_score: item.quality_score,
+    tags: item.tags,
+    metadata: {
+      source: 'sample_data',
+      auto_generated: true,
+      created_at: new Date().toISOString()
+    },
+    auto_collected: false,
+    used_in_training: false,
+    created_at: new Date().toISOString()
+  }));
+
+  try {
+    const { data, error } = await supabase
+      .from('training_data')
+      .insert(trainingRecords)
+      .select();
+
+    if (error) throw error;
+    
+    console.log(`Successfully created ${data.length} sample training records`);
+    return data;
+  } catch (error) {
+    console.error('Error creating sample training data:', error);
+    throw error;
+  }
 }
 
 async function getTrainingStatus(req, res, userId) {
