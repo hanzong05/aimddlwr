@@ -24,7 +24,9 @@ export default async function handler(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
 
-    const { type } = req.query; // memory, chat, tools
+    const { type, action } = req.query; // memory, chat, tools
+    
+    console.log(`Brain API called with type: ${type}, action: ${action}, query:`, req.query);
 
     switch (type) {
       case 'memory':
@@ -34,7 +36,10 @@ export default async function handler(req, res) {
       case 'tools':
         return await handleTools(req, res, userId);
       default:
-        return res.status(400).json({ error: 'Invalid type. Use ?type=memory, ?type=chat, or ?type=tools' });
+        return res.status(400).json({ 
+          error: 'Invalid type. Use ?type=memory, ?type=chat, or ?type=tools',
+          received: { type, action, allQuery: req.query }
+        });
     }
 
   } catch (error) {
@@ -369,27 +374,39 @@ async function handleTools(req, res, userId) {
   }
 
   const { action } = req.query;
-  const { tool, params = {} } = req.body;
+  const { tool, toolName, params = {}, parameters = {} } = req.body;
   
-  if (action === 'execute' && !tool) {
-    return res.status(400).json({ error: 'Tool name required in body for execute action' });
+  // Support both 'tool' and 'toolName' for compatibility
+  const selectedTool = tool || toolName;
+  const selectedParams = Object.keys(params).length > 0 ? params : parameters;
+  
+  if (action === 'execute' && !selectedTool) {
+    return res.status(400).json({ error: 'Tool name required in body (use "tool" or "toolName" field)' });
   }
 
   try {
     let result;
     
-    switch (tool) {
+    switch (selectedTool) {
       case 'analyze-conversation':
-        result = await analyzeConversation(userId, params);
+        result = await analyzeConversation(userId, selectedParams);
         break;
       case 'optimize-memory':
-        result = await optimizeMemory(userId, params);
+        result = await optimizeMemory(userId, selectedParams);
         break;
       case 'generate-insights':
-        result = await generateInsights(userId, params);
+        result = await generateInsights(userId, selectedParams);
+        break;
+      case 'memory_search':
+        // Handle memory search tool from frontend
+        result = await handleMemorySearch(userId, selectedParams);
         break;
       default:
-        return res.status(400).json({ error: 'Unknown tool' });
+        return res.status(400).json({ 
+          error: 'Unknown tool',
+          availableTools: ['analyze-conversation', 'optimize-memory', 'generate-insights', 'memory_search'],
+          received: selectedTool
+        });
     }
 
     res.json({ success: true, result });
@@ -448,6 +465,31 @@ async function generateInsights(userId, params) {
       averageQuality: categories[cat].reduce((a, b) => a + b, 0) / categories[cat].length
     })),
     recommendations: ['Focus on high-quality examples', 'Diversify training categories', 'Regular model retraining']
+  };
+}
+
+async function handleMemorySearch(userId, params) {
+  const { query = '', limit = 10 } = params;
+  
+  // Search training data as memory fallback
+  const { data: memories } = await supabase
+    .from('training_data')
+    .select('input, output, category, quality_score')
+    .eq('user_id', userId)
+    .or(`input.ilike.%${query}%,output.ilike.%${query}%`)
+    .order('quality_score', { ascending: false })
+    .limit(limit);
+
+  return {
+    searchQuery: query,
+    totalResults: memories?.length || 0,
+    memories: (memories || []).map(item => ({
+      id: item.id,
+      content: item.output,
+      summary: item.input,
+      category: item.category,
+      relevance: item.quality_score / 5.0
+    }))
   };
 }
 
