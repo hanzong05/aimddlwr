@@ -298,13 +298,24 @@ async function handleChat(req, res, userId) {
       console.error('Could not store conversation:', storeError);
     }
 
+    // Calculate confidence score based on context quality and availability
+    const confidence = calculateConfidence(enhancedContext, message, memoryCount);
+
+    // Determine tools used (based on message content and context)
+    const toolsUsed = determineToolsUsed(message, enhancedContext);
+
     res.json({
       success: true,
       response: response,
+      confidence: confidence,
+      tools_used: toolsUsed,
+      memory_count: memoryCount,
       metadata: {
         model_used: selectedModel?.name || 'Base AI',
         memory_references: memoryCount,
-        enhanced_with_context: enhancedContext.length > 0
+        enhanced_with_context: enhancedContext.length > 0,
+        confidence_score: confidence,
+        tools_triggered: toolsUsed
       }
     });
 
@@ -399,65 +410,63 @@ async function retrieveRelevantContext(userId, message) {
 function generateBrainResponse(message, context, model) {
   const specialization = model?.specialization || 'general';
   const lowerMessage = message.toLowerCase();
-  
+
   if (context) {
     // Extract the most relevant answer from context
     const contextLines = context.split('\n\n');
     const bestMatch = contextLines[0]; // First result is highest quality
-    
+
     if (bestMatch.includes('A: ')) {
       const answer = bestMatch.split('A: ')[1].split('\nCategory:')[0];
-      return `Based on your training data:\n\n${answer}`;
+
+      // Make the response more conversational and helpful
+      if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+        return `Hello! I found some relevant information in your training data:\n\n${answer}\n\nIs there anything specific you'd like me to help you with?`;
+      } else if (lowerMessage.includes('what') || lowerMessage.includes('how') || lowerMessage.includes('?')) {
+        return `Based on your training data, here's what I found:\n\n${answer}\n\nWould you like me to elaborate on any part of this?`;
+      } else {
+        return `I found this relevant information in your training data:\n\n${answer}`;
+      }
     }
-    
-    return `Based on your ${specialization} training data, here's what I found:\n\n${context.substring(0, 500)}...`;
+
+    // If no perfect match, provide contextual information
+    const categories = [...new Set(contextLines.map(line => {
+      const categoryMatch = line.match(/Category: (\w+)/);
+      return categoryMatch ? categoryMatch[1] : null;
+    }).filter(Boolean))];
+
+    return `Based on your ${specialization} training data${categories.length > 0 ? ` (${categories.join(', ')})` : ''}, here's what I found:\n\n${context.substring(0, 400)}${context.length > 400 ? '...' : ''}\n\nWould you like me to search for more specific information?`;
   } else {
-    // Provide basic responses for common queries
+    // Provide intelligent responses for common queries
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      return "Hello! I'm your AI assistant. I can help with programming, web development, and technical questions. How can I assist you today?";
-    } else if (lowerMessage.includes('java') && lowerMessage.includes('teach')) {
-      return `I'd be happy to teach you Java! Here are some fundamentals:
-
-**Basic Java Structure:**
-\`\`\`java
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-\`\`\`
-
-**Variables and Data Types:**
-\`\`\`java
-int number = 42;
-String text = "Hello";
-boolean isTrue = true;
-double decimal = 3.14;
-\`\`\`
-
-Would you like me to explain any specific Java concepts?`;
-    } else if (lowerMessage.includes('github') && lowerMessage.includes('search')) {
-      return `To search GitHub effectively:
-
-**GitHub Search Syntax:**
-- \`user:username\` - Search in specific user's repos
-- \`language:java\` - Filter by programming language
-- \`stars:>100\` - Filter by star count
-- \`created:>2023-01-01\` - Filter by creation date
-
-**Advanced Search:**
-- Go to github.com/search/advanced
-- Use specific filters for repositories, code, issues, etc.
-- Search within code: \`filename:config.js\`
-
-**GitHub CLI:**
-\`\`\`bash
-gh repo search "machine learning" --language=python
-\`\`\`
-
-What specific type of project are you looking for?`;
+      return `Hello! I'm your AI assistant specialized in ${specialization}. I can help with programming, web development, and technical questions. How can I assist you today?`;
+    } else if (lowerMessage.includes('remember') || lowerMessage.includes('memory')) {
+      return `I don't have any specific memories stored yet, but I can help you store and recall information. Try asking me to remember something specific, or let me know what programming topic you'd like to learn about!`;
+    } else if (lowerMessage.includes('learn') || lowerMessage.includes('teach')) {
+      return `I'd love to help you learn! I can teach you about:\n\n• **Programming Languages**: JavaScript, Python, Java, React, etc.\n• **Web Development**: HTML, CSS, APIs, databases\n• **Development Tools**: Git, GitHub, deployment\n• **Best Practices**: Code organization, testing, debugging\n\nWhat would you like to start with?`;
+    } else if (lowerMessage.includes('progress') || lowerMessage.includes('analytics')) {
+      return `I can analyze your learning progress! Currently, I need more training data to provide detailed insights. Try:\n\n• Having more conversations with me\n• Asking technical questions\n• Sharing code examples\n\nThis will help me learn your interests and provide better analytics.`;
+    } else if (lowerMessage.includes('search') || lowerMessage.includes('find')) {
+      return `I can search through your training data and memories. However, I need more data to search through. Try:\n\n• Training me with more examples\n• Asking specific technical questions\n• Discussing programming concepts\n\nWhat specific topic would you like me to help you find information about?`;
     } else {
-      return `Hello! I'm your AI assistant with ${specialization} specialization. Regarding "${message}", I'd be happy to help. For better responses, please train me with more relevant data or try asking about programming topics like Java, JavaScript, React, or GitHub.`;
+      // Try to be helpful based on common programming keywords
+      const programmingTopics = {
+        'javascript': 'JavaScript programming, including async/await, DOM manipulation, and frameworks',
+        'react': 'React development, including components, hooks, and state management',
+        'node': 'Node.js backend development, APIs, and server-side programming',
+        'python': 'Python programming, data structures, and web development',
+        'git': 'Git version control, branching, merging, and collaboration',
+        'api': 'API development, REST principles, and integration',
+        'database': 'Database design, SQL queries, and data management'
+      };
+
+      const detectedTopic = Object.keys(programmingTopics).find(topic => lowerMessage.includes(topic));
+
+      if (detectedTopic) {
+        return `I can help you with ${programmingTopics[detectedTopic]}! However, I need more training data about "${message}" to give you a detailed response. \n\nFor now, I can provide general guidance. What specific aspect of ${detectedTopic} would you like to explore?`;
+      }
+
+      return `I understand you're asking about "${message}". As your AI assistant with ${specialization} specialization, I'd love to help but need more training data on this topic.\n\nTry asking me about:\n• Programming concepts\n• Code examples\n• Technical problems you're solving\n• Learning goals\n\nHow can I assist you with your development work?`;
     }
   }
 }
@@ -616,9 +625,66 @@ function extractTopics(conversations) {
       }
     });
   });
-  
+
   return Object.entries(topics)
     .sort(([,a], [,b]) => b - a)
     .slice(0, 5)
     .map(([topic, count]) => ({ topic, count }));
+}
+
+function calculateConfidence(context, message, memoryCount) {
+  let confidence = 0.3; // Base confidence
+
+  // Increase confidence based on available context
+  if (context && context.length > 0) {
+    confidence += 0.4; // +40% for having context
+
+    // Bonus for relevant context (check if message keywords appear in context)
+    const messageWords = message.toLowerCase().split(' ').filter(word => word.length > 2);
+    const contextLower = context.toLowerCase();
+    const relevantWords = messageWords.filter(word => contextLower.includes(word));
+
+    if (relevantWords.length > 0) {
+      confidence += (relevantWords.length / messageWords.length) * 0.2; // Up to +20% for relevance
+    }
+  }
+
+  // Increase confidence based on memory count
+  if (memoryCount > 0) {
+    confidence += Math.min(0.1, memoryCount * 0.02); // Up to +10% for memories
+  }
+
+  // Cap confidence at 95%
+  return Math.min(0.95, Math.max(0.1, confidence));
+}
+
+function determineToolsUsed(message, context) {
+  const tools = [];
+  const lowerMessage = message.toLowerCase();
+
+  // Detect if memory search was used
+  if (context && context.length > 0) {
+    tools.push('memory_search');
+  }
+
+  // Detect specific tool keywords
+  if (lowerMessage.includes('search') || lowerMessage.includes('find')) {
+    if (!tools.includes('memory_search')) {
+      tools.push('memory_search');
+    }
+  }
+
+  if (lowerMessage.includes('analyze') || lowerMessage.includes('analysis')) {
+    tools.push('analyze_conversation');
+  }
+
+  if (lowerMessage.includes('progress') || lowerMessage.includes('learning')) {
+    tools.push('generate_insights');
+  }
+
+  if (lowerMessage.includes('github') || lowerMessage.includes('repository')) {
+    tools.push('github_search');
+  }
+
+  return tools.length > 0 ? tools.join(', ') : 'none';
 }
