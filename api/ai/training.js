@@ -15,18 +15,27 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
+    console.log(`Training API called - Method: ${req.method}, URL: ${req.url}, Query:`, req.query);
+    
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Training API: Missing authorization header');
       return res.status(401).json({ error: 'Missing authorization header' });
     }
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
+    
+    console.log(`Training API: Authenticated user ${userId}`);
 
     const { type = 'regular' } = req.query; // regular or advanced
+    console.log(`Training API: Type determined as '${type}'`);
 
     if (req.method === 'POST') {
+      console.log(`Training API: Starting ${type} training for user ${userId}`);
+      console.log('Training API: Request body:', req.body);
+      
       return type === 'advanced' 
         ? await startAdvancedTraining(req, res, userId)
         : await startTraining(req, res, userId);
@@ -119,6 +128,9 @@ async function startTraining(req, res, userId) {
 }
 
 async function startAdvancedTraining(req, res, userId) {
+  console.log('startAdvancedTraining called for user:', userId);
+  console.log('Request body:', req.body);
+  
   const { 
     modelType = 'advanced',
     epochs = 10, 
@@ -129,6 +141,8 @@ async function startAdvancedTraining(req, res, userId) {
     useMemorySystem = true,
     useAutoLearning = true
   } = req.body;
+  
+  console.log('Advanced training config:', { modelType, epochs, learningRate, batchSize, modelName, specialization });
 
   const { data: trainingData, error: dataError } = await supabase
     .from('training_data')
@@ -139,11 +153,23 @@ async function startAdvancedTraining(req, res, userId) {
     .order('created_at', { ascending: false })
     .limit(2000);
 
-  if (dataError) throw dataError;
+  if (dataError) {
+    console.error('Error fetching training data:', dataError);
+    throw dataError;
+  }
+  
+  console.log(`Found ${trainingData?.length || 0} training examples for user ${userId}`);
 
   if (!trainingData || trainingData.length < 10) {
+    console.log(`Insufficient training data (${trainingData?.length || 0} < 10), creating sample data`);
     if (!trainingData || trainingData.length === 0) {
-      await createAdvancedSampleData(userId);
+      try {
+        await createAdvancedSampleData(userId);
+        console.log('Successfully created advanced sample data');
+      } catch (sampleError) {
+        console.error('Error creating sample data:', sampleError);
+        return res.status(500).json({ error: 'Failed to create sample training data' });
+      }
       
       const { data: newData, error: newError } = await supabase
         .from('training_data')
