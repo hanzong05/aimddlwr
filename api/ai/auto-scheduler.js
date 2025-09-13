@@ -16,9 +16,9 @@ export default async function handler(req, res) {
   try {
     console.log('Auto-scheduler triggered');
 
-    // Get all users with auto-generation enabled
+    // Get all users with auto-generation enabled from user_preferences
     const { data: users, error: usersError } = await supabase
-      .from('user_settings')
+      .from('user_preferences')
       .select('user_id, auto_categories, auto_interval_hours, auto_questions_per_batch, last_auto_run')
       .eq('auto_questions_enabled', true);
 
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
 
           // Update last run time
           await supabase
-            .from('user_settings')
+            .from('user_preferences')
             .update({ last_auto_run: now.toISOString() })
             .eq('user_id', user.user_id);
 
@@ -246,31 +246,28 @@ function getDifficultyScore(difficulty) {
 
 async function updateUserStats(userId, questionsGenerated) {
   try {
-    const { data: stats } = await supabase
-      .from('user_stats')
-      .select('auto_questions_generated')
-      .eq('user_id', userId)
-      .single();
+    // Update user_preferences with generation stats
+    await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: userId,
+        auto_questions_generated: questionsGenerated,
+        last_auto_generation: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
-    if (stats) {
+    // Also update user_activity_summary if it exists
+    try {
       await supabase
-        .from('user_stats')
-        .update({
-          auto_questions_generated: (stats.auto_questions_generated || 0) + questionsGenerated,
-          last_auto_generation: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId);
-    } else {
-      await supabase
-        .from('user_stats')
-        .insert({
+        .from('user_activity_summary')
+        .upsert({
           user_id: userId,
-          auto_questions_generated: questionsGenerated,
-          last_auto_generation: new Date().toISOString(),
-          created_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         });
+    } catch (activityError) {
+      console.log('Activity summary update failed:', activityError.message);
     }
+
   } catch (error) {
     console.error('Error updating user stats:', error);
   }

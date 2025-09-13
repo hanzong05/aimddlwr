@@ -84,8 +84,13 @@ async function generateRandomQuestions(req, res, userId, count, category, auto) 
       throw insertError;
     }
 
-    // Update generation stats
-    await updateGenerationStats(userId, questions.length, category);
+    // Update generation stats (gracefully handle missing table)
+    try {
+      await updateGenerationStats(userId, questions.length, category);
+    } catch (statsError) {
+      console.log('Stats update failed (table may not exist):', statsError.message);
+      // Continue without failing the whole request
+    }
 
     res.json({
       success: true,
@@ -226,40 +231,42 @@ function getDifficultyScore(difficulty) {
 
 async function updateGenerationStats(userId, count, category) {
   try {
-    const { data: existingStats } = await supabase
-      .from('user_stats')
+    // Try to update user_activity_summary instead (which exists in your DB)
+    const { data: existingActivity } = await supabase
+      .from('user_activity_summary')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (existingStats) {
+    if (existingActivity) {
       await supabase
-        .from('user_stats')
+        .from('user_activity_summary')
         .update({
-          auto_questions_generated: (existingStats.auto_questions_generated || 0) + count,
-          last_auto_generation: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId);
-    } else {
-      await supabase
-        .from('user_stats')
-        .insert({
-          user_id: userId,
-          auto_questions_generated: count,
-          last_auto_generation: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        });
     }
+
+    // Also update user_preferences with generation info
+    await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: userId,
+        last_auto_generation: new Date().toISOString(),
+        auto_questions_generated: count,
+        updated_at: new Date().toISOString()
+      });
+
   } catch (error) {
     console.error('Error updating generation stats:', error);
+    throw error; // Re-throw to trigger the catch block in the main function
   }
 }
 
 async function getGenerationStatus(req, res, userId) {
   try {
-    const { data: stats } = await supabase
-      .from('user_stats')
+    const { data: preferences } = await supabase
+      .from('user_preferences')
       .select('auto_questions_generated, last_auto_generation')
       .eq('user_id', userId)
       .single();
@@ -275,8 +282,8 @@ async function getGenerationStatus(req, res, userId) {
     res.json({
       success: true,
       stats: {
-        total_generated: stats?.auto_questions_generated || 0,
-        last_generation: stats?.last_auto_generation || null,
+        total_generated: preferences?.auto_questions_generated || 0,
+        last_generation: preferences?.last_auto_generation || null,
         recent_questions: recentQuestions || []
       }
     });
@@ -291,9 +298,9 @@ async function startAutomaticGeneration(req, res, userId) {
   const { categories = ['programming', 'webdev'], interval_hours = 6, questions_per_batch = 3 } = req.body;
 
   try {
-    // Store automatic generation settings
+    // Store automatic generation settings in user_preferences
     const { data: settings } = await supabase
-      .from('user_settings')
+      .from('user_preferences')
       .upsert({
         user_id: userId,
         auto_questions_enabled: true,
