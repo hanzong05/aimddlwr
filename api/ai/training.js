@@ -67,7 +67,6 @@ async function startTraining(req, res, userId) {
     .from('training_data')
     .select('*')
     .eq('user_id', userId)
-    .eq('used_in_training', false)
     .gte('quality_score', 3.0)
     .order('created_at', { ascending: false })
     .limit(1000);
@@ -82,8 +81,7 @@ async function startTraining(req, res, userId) {
         .from('training_data')
         .select('*')
         .eq('user_id', userId)
-        .eq('used_in_training', false)
-        .gte('quality_score', 3.0)
+        .gte('quality_score', 2.0)
         .order('created_at', { ascending: false })
         .limit(1000);
       
@@ -153,8 +151,7 @@ async function startAdvancedTraining(req, res, userId) {
     .from('training_data')
     .select('*')
     .eq('user_id', userId)
-    .eq('used_in_training', false)
-    .gte('quality_score', 3.0)
+    .gte('quality_score', 2.0)
     .order('created_at', { ascending: false })
     .limit(2000);
 
@@ -180,8 +177,7 @@ async function startAdvancedTraining(req, res, userId) {
         .from('training_data')
         .select('*')
         .eq('user_id', userId)
-        .eq('used_in_training', false)
-        .gte('quality_score', 3.0)
+        .gte('quality_score', 2.0)
         .order('created_at', { ascending: false })
         .limit(2000);
       
@@ -406,9 +402,6 @@ async function createSampleTrainingData(userId) {
     category: item.category,
     quality_score: item.quality_score,
     tags: item.tags,
-    metadata: { source: 'sample_data' },
-    auto_collected: false,
-    used_in_training: false,
     created_at: new Date().toISOString()
   }));
 
@@ -499,13 +492,6 @@ async function createAdvancedSampleData(userId) {
     category: item.category,
     quality_score: item.quality_score,
     tags: item.tags,
-    metadata: { 
-      source: 'advanced_sample_data',
-      auto_generated: true,
-      created_at: new Date().toISOString()
-    },
-    auto_collected: false,
-    used_in_training: false,
     created_at: new Date().toISOString()
   }));
 
