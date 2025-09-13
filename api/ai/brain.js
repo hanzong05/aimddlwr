@@ -319,18 +319,51 @@ async function retrieveRelevantContext(userId, message) {
   let memoryCount = 0;
 
   try {
-    const { data: trainingData } = await supabase
+    // First, try to find exact matches
+    let { data: trainingData } = await supabase
       .from('training_data')
       .select('input, output, category')
       .eq('user_id', userId)
       .or(`input.ilike.%${message}%,output.ilike.%${message}%`)
-      .gte('quality_score', 3.0)
+      .gte('quality_score', 2.0)
       .order('quality_score', { ascending: false })
-      .limit(3);
+      .limit(5);
+
+    // If no matches found, try keyword-based search
+    if (!trainingData || trainingData.length === 0) {
+      const keywords = message.toLowerCase().split(' ').filter(word => word.length > 2);
+      if (keywords.length > 0) {
+        const keywordSearch = keywords.map(keyword => `input.ilike.%${keyword}%,output.ilike.%${keyword}%,category.ilike.%${keyword}%`).join(',');
+        
+        const { data: keywordData } = await supabase
+          .from('training_data')
+          .select('input, output, category')
+          .eq('user_id', userId)
+          .or(keywordSearch)
+          .gte('quality_score', 2.0)
+          .order('quality_score', { ascending: false })
+          .limit(3);
+          
+        trainingData = keywordData;
+      }
+    }
+
+    // If still no matches, get the best general training data
+    if (!trainingData || trainingData.length === 0) {
+      const { data: generalData } = await supabase
+        .from('training_data')
+        .select('input, output, category')
+        .eq('user_id', userId)
+        .gte('quality_score', 3.5)
+        .order('quality_score', { ascending: false })
+        .limit(2);
+        
+      trainingData = generalData;
+    }
 
     if (trainingData && trainingData.length > 0) {
       memoryCount = trainingData.length;
-      context = trainingData.map(t => `Q: ${t.input} A: ${t.output.substring(0, 200)}`).join('\n');
+      context = trainingData.map(t => `Q: ${t.input}\nA: ${t.output.substring(0, 300)}\nCategory: ${t.category}`).join('\n\n');
     }
   } catch (error) {
     console.error('Error retrieving context:', error);
@@ -341,11 +374,67 @@ async function retrieveRelevantContext(userId, message) {
 
 function generateBrainResponse(message, context, model) {
   const specialization = model?.specialization || 'general';
+  const lowerMessage = message.toLowerCase();
   
   if (context) {
-    return `Based on your ${specialization} training data: ${message}\n\nFrom your learned patterns, here's my response: This incorporates your previous training and provides a contextual answer based on your knowledge base.`;
+    // Extract the most relevant answer from context
+    const contextLines = context.split('\n\n');
+    const bestMatch = contextLines[0]; // First result is highest quality
+    
+    if (bestMatch.includes('A: ')) {
+      const answer = bestMatch.split('A: ')[1].split('\nCategory:')[0];
+      return `Based on your training data:\n\n${answer}`;
+    }
+    
+    return `Based on your ${specialization} training data, here's what I found:\n\n${context.substring(0, 500)}...`;
   } else {
-    return `Hello! I'm your AI assistant with ${specialization} specialization. Regarding "${message}", I'd be happy to help. For better responses, please train me with more relevant data.`;
+    // Provide basic responses for common queries
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+      return "Hello! I'm your AI assistant. I can help with programming, web development, and technical questions. How can I assist you today?";
+    } else if (lowerMessage.includes('java') && lowerMessage.includes('teach')) {
+      return `I'd be happy to teach you Java! Here are some fundamentals:
+
+**Basic Java Structure:**
+\`\`\`java
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, World!");
+    }
+}
+\`\`\`
+
+**Variables and Data Types:**
+\`\`\`java
+int number = 42;
+String text = "Hello";
+boolean isTrue = true;
+double decimal = 3.14;
+\`\`\`
+
+Would you like me to explain any specific Java concepts?`;
+    } else if (lowerMessage.includes('github') && lowerMessage.includes('search')) {
+      return `To search GitHub effectively:
+
+**GitHub Search Syntax:**
+- \`user:username\` - Search in specific user's repos
+- \`language:java\` - Filter by programming language
+- \`stars:>100\` - Filter by star count
+- \`created:>2023-01-01\` - Filter by creation date
+
+**Advanced Search:**
+- Go to github.com/search/advanced
+- Use specific filters for repositories, code, issues, etc.
+- Search within code: \`filename:config.js\`
+
+**GitHub CLI:**
+\`\`\`bash
+gh repo search "machine learning" --language=python
+\`\`\`
+
+What specific type of project are you looking for?`;
+    } else {
+      return `Hello! I'm your AI assistant with ${specialization} specialization. Regarding "${message}", I'd be happy to help. For better responses, please train me with more relevant data or try asking about programming topics like Java, JavaScript, React, or GitHub.`;
+    }
   }
 }
 
