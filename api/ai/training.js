@@ -416,8 +416,80 @@ async function createSampleTrainingData(userId) {
 }
 
 async function createAdvancedSampleData(userId) {
+  console.log('Creating advanced sample data for user:', userId);
+  
+  // Use the same comprehensive sample data as regular training
   const sampleData = [
-    { input: "How do I create a React component with hooks?", output: "React component with hooks:\n\n```jsx\nimport React, { useState, useEffect } from 'react';\n\nfunction MyComponent() {\n  const [count, setCount] = useState(0);\n  \n  useEffect(() => {\n    document.title = `Count: ${count}`;\n  }, [count]);\n\n  return (\n    <div>\n      <h1>Count: {count}</h1>\n      <button onClick={() => setCount(count + 1)}>Increment</button>\n    </div>\n  );\n}\n\nexport default MyComponent;\n```", category: "react", quality_score: 4.5, tags: ["react", "hooks"] }
+    {
+      input: "How do I create a React component with hooks?",
+      output: "To create a React component with hooks:\n\n```jsx\nimport React, { useState, useEffect } from 'react';\n\nfunction MyComponent() {\n  const [count, setCount] = useState(0);\n  const [data, setData] = useState(null);\n\n  useEffect(() => {\n    fetchData().then(setData);\n  }, []);\n\n  return (\n    <div>\n      <h1>Count: {count}</h1>\n      <button onClick={() => setCount(count + 1)}>Increment</button>\n    </div>\n  );\n}\n\nexport default MyComponent;\n```",
+      category: "react",
+      quality_score: 4.5,
+      tags: ["react", "hooks", "useState", "useEffect"]
+    },
+    {
+      input: "How to handle async operations in JavaScript?",
+      output: "You can handle async operations using async/await:\n\n```javascript\nasync function fetchData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n```\n\nOr using Promises:\n\n```javascript\nfetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error));\n```",
+      category: "javascript",
+      quality_score: 4.5,
+      tags: ["javascript", "async", "promises"]
+    },
+    {
+      input: "What is the difference between let, const, and var?",
+      output: "The main differences are:\n\n**var:**\n- Function-scoped\n- Can be redeclared\n- Hoisted\n\n**let:**\n- Block-scoped\n- Cannot be redeclared in same scope\n- Hoisted but not initialized\n\n**const:**\n- Block-scoped\n- Cannot be redeclared or reassigned\n- Must be initialized\n\n```javascript\nvar x = 1;    // Function scoped\nlet y = 2;    // Block scoped\nconst z = 3;  // Block scoped, immutable\n```",
+      category: "javascript",
+      quality_score: 4.3,
+      tags: ["javascript", "variables", "scope"]
+    },
+    {
+      input: "How to connect to a database in Node.js?",
+      output: "Here's how to connect to different databases:\n\n**MongoDB with Mongoose:**\n```javascript\nconst mongoose = require('mongoose');\n\nmongoose.connect('mongodb://localhost:27017/myapp', {\n  useNewUrlParser: true,\n  useUnifiedTopology: true\n});\n```\n\n**PostgreSQL with pg:**\n```javascript\nconst { Client } = require('pg');\n\nconst client = new Client({\n  host: 'localhost',\n  database: 'myapp',\n  user: 'username',\n  password: 'password'\n});\n\nclient.connect();\n```",
+      category: "nodejs",
+      quality_score: 4.1,
+      tags: ["nodejs", "database", "mongodb", "postgresql"]
+    },
+    {
+      input: "How to handle errors in Express.js?",
+      output: "Error handling in Express.js:\n\n**Basic error middleware:**\n```javascript\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).send('Something broke!');\n});\n```\n\n**Try-catch with async/await:**\n```javascript\napp.get('/api/data', async (req, res, next) => {\n  try {\n    const data = await fetchData();\n    res.json(data);\n  } catch (error) {\n    next(error);\n  }\n});\n```",
+      category: "nodejs",
+      quality_score: 4.4,
+      tags: ["nodejs", "express", "error-handling"]
+    },
+    {
+      input: "How to style components in React?",
+      output: "Several ways to style React components:\n\n**CSS Modules:**\n```jsx\nimport styles from './Button.module.css';\n\nfunction Button() {\n  return <button className={styles.primary}>Click me</button>;\n}\n```\n\n**Styled Components:**\n```jsx\nimport styled from 'styled-components';\n\nconst StyledButton = styled.button`\n  background: blue;\n  color: white;\n  padding: 10px;\n`;\n```\n\n**Inline styles:**\n```jsx\nfunction Button() {\n  const buttonStyle = { backgroundColor: 'blue', color: 'white' };\n  return <button style={buttonStyle}>Click me</button>;\n}\n```",
+      category: "react",
+      quality_score: 4.0,
+      tags: ["react", "css", "styling"]
+    },
+    {
+      input: "How to deploy a Node.js app to production?",
+      output: "Steps to deploy Node.js to production:\n\n**Using PM2:**\n```bash\nnpm install -g pm2\npm2 start app.js --name \"my-app\"\npm2 startup\npm2 save\n```\n\n**Environment setup:**\n```bash\nexport NODE_ENV=production\nnpm install --production\n```\n\n**Docker deployment:**\n```dockerfile\nFROM node:16-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci --only=production\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"app.js\"]\n```",
+      category: "deployment",
+      quality_score: 4.6,
+      tags: ["nodejs", "deployment", "pm2", "docker"]
+    },
+    {
+      input: "How to use React Context for state management?",
+      output: "React Context for state management:\n\n**Create Context:**\n```jsx\nconst UserContext = createContext();\n\nconst UserProvider = ({ children }) => {\n  const [user, setUser] = useState(null);\n  \n  return (\n    <UserContext.Provider value={{ user, setUser }}>\n      {children}\n    </UserContext.Provider>\n  );\n};\n```\n\n**Use Context:**\n```jsx\nconst { user, setUser } = useContext(UserContext);\n```",
+      category: "react",
+      quality_score: 4.2,
+      tags: ["react", "context", "state-management"]
+    },
+    {
+      input: "What are React lifecycle methods?",
+      output: "React lifecycle methods (Class components):\n\n**Mounting:**\n- constructor()\n- componentDidMount()\n\n**Updating:**\n- componentDidUpdate()\n- getSnapshotBeforeUpdate()\n\n**Unmounting:**\n- componentWillUnmount()\n\n**Hook equivalents:**\n```jsx\nuseEffect(() => {\n  // componentDidMount\n}, []);\n\nuseEffect(() => {\n  // componentDidUpdate\n});\n\nuseEffect(() => {\n  return () => {\n    // componentWillUnmount\n  };\n}, []);\n```",
+      category: "react",
+      quality_score: 4.3,
+      tags: ["react", "lifecycle", "hooks"]
+    },
+    {
+      input: "How to implement authentication in Node.js?",
+      output: "Node.js authentication with JWT:\n\n**Login endpoint:**\n```javascript\napp.post('/login', async (req, res) => {\n  const { email, password } = req.body;\n  \n  const user = await User.findOne({ email });\n  const isValid = await bcrypt.compare(password, user.password);\n  \n  if (isValid) {\n    const token = jwt.sign({ userId: user.id }, JWT_SECRET);\n    res.json({ token });\n  } else {\n    res.status(401).json({ error: 'Invalid credentials' });\n  }\n});\n```\n\n**Middleware:**\n```javascript\nconst auth = (req, res, next) => {\n  const token = req.header('Authorization')?.replace('Bearer ', '');\n  const decoded = jwt.verify(token, JWT_SECRET);\n  req.user = decoded;\n  next();\n};\n```",
+      category: "authentication",
+      quality_score: 4.7,
+      tags: ["nodejs", "authentication", "jwt", "security"]
+    }
   ];
 
   const records = sampleData.map(item => ({
@@ -427,11 +499,28 @@ async function createAdvancedSampleData(userId) {
     category: item.category,
     quality_score: item.quality_score,
     tags: item.tags,
-    metadata: { source: 'advanced_sample_data' },
+    metadata: { 
+      source: 'advanced_sample_data',
+      auto_generated: true,
+      created_at: new Date().toISOString()
+    },
     auto_collected: false,
     used_in_training: false,
     created_at: new Date().toISOString()
   }));
 
-  await supabase.from('training_data').insert(records);
+  try {
+    const { data, error } = await supabase
+      .from('training_data')
+      .insert(records)
+      .select();
+
+    if (error) throw error;
+    
+    console.log(`Successfully created ${data.length} advanced sample training records`);
+    return data;
+  } catch (error) {
+    console.error('Error creating advanced sample training data:', error);
+    throw error;
+  }
 }
