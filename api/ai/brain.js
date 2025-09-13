@@ -318,9 +318,11 @@ async function retrieveRelevantContext(userId, message) {
   let context = '';
   let memoryCount = 0;
 
+  console.log(`🔍 Searching training data for user ${userId} with message: "${message}"`);
+
   try {
     // First, try to find exact matches
-    let { data: trainingData } = await supabase
+    let { data: trainingData, error: searchError } = await supabase
       .from('training_data')
       .select('input, output, category')
       .eq('user_id', userId)
@@ -328,6 +330,12 @@ async function retrieveRelevantContext(userId, message) {
       .gte('quality_score', 2.0)
       .order('quality_score', { ascending: false })
       .limit(5);
+
+    if (searchError) {
+      console.error('Training data search error:', searchError);
+    }
+    
+    console.log(`📊 Found ${trainingData?.length || 0} exact matches`);
 
     // If no matches found, try keyword-based search
     if (!trainingData || trainingData.length === 0) {
@@ -350,15 +358,31 @@ async function retrieveRelevantContext(userId, message) {
 
     // If still no matches, get the best general training data
     if (!trainingData || trainingData.length === 0) {
+      console.log('🔄 No keyword matches, fetching best general training data...');
       const { data: generalData } = await supabase
         .from('training_data')
         .select('input, output, category')
         .eq('user_id', userId)
-        .gte('quality_score', 3.5)
+        .gte('quality_score', 2.0)  // Lowered threshold
         .order('quality_score', { ascending: false })
-        .limit(2);
+        .limit(3);
         
       trainingData = generalData;
+      console.log(`📚 Found ${generalData?.length || 0} general training examples`);
+    }
+
+    // If STILL no matches, get ANY training data for this user
+    if (!trainingData || trainingData.length === 0) {
+      console.log('🆘 Getting ANY training data for user...');
+      const { data: anyData } = await supabase
+        .from('training_data')
+        .select('input, output, category')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(2);
+        
+      trainingData = anyData;
+      console.log(`🗂️ Found ${anyData?.length || 0} total training examples for user`);
     }
 
     if (trainingData && trainingData.length > 0) {

@@ -5,6 +5,7 @@
     "build": "echo 'Serverless functions'",
     "deploy": "vercel --prod",
     "populate-training": "node scripts/populate-training.js",
+    "auto-train": "node scripts/auto-train.js",
     "dev": "vercel dev"
   },
   "dependencies": {
