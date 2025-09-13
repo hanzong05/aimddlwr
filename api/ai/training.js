@@ -147,20 +147,41 @@ async function startAdvancedTraining(req, res, userId) {
     
     console.log('Advanced training config:', { modelType, epochs, learningRate, batchSize, modelName, specialization });
 
-  const { data: trainingData, error: dataError } = await supabase
-    .from('training_data')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('quality_score', 2.0)
-    .order('created_at', { ascending: false })
-    .limit(2000);
+  let trainingData;
+  try {
+    const { data, error: dataError } = await supabase
+      .from('training_data')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('quality_score', 2.0)
+      .order('created_at', { ascending: false })
+      .limit(2000);
 
-  if (dataError) {
-    console.error('Error fetching training data:', dataError);
-    throw dataError;
+    if (dataError) {
+      console.error('Error fetching training data:', dataError);
+      throw dataError;
+    }
+    
+    trainingData = data;
+    console.log(`Found ${trainingData?.length || 0} training examples for user ${userId}`);
+    
+    // If we have data but it's less than 10, log details
+    if (trainingData && trainingData.length > 0 && trainingData.length < 10) {
+      console.log('Training data details:', trainingData.map(item => ({
+        id: item.id,
+        input: item.input?.substring(0, 50) + '...',
+        category: item.category,
+        quality_score: item.quality_score
+      })));
+    }
+    
+  } catch (error) {
+    console.error('Database query failed:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch training data', 
+      details: error.message 
+    });
   }
-  
-  console.log(`Found ${trainingData?.length || 0} training examples for user ${userId}`);
 
   if (!trainingData || trainingData.length < 10) {
     console.log(`Insufficient training data (${trainingData?.length || 0} < 10), creating sample data`);
@@ -401,7 +422,6 @@ async function createSampleTrainingData(userId) {
     output: item.output,
     category: item.category,
     quality_score: item.quality_score,
-    tags: item.tags,
     created_at: new Date().toISOString()
   }));
 
@@ -491,7 +511,6 @@ async function createAdvancedSampleData(userId) {
     output: item.output,
     category: item.category,
     quality_score: item.quality_score,
-    tags: item.tags,
     created_at: new Date().toISOString()
   }));
 

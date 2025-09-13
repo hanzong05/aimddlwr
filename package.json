@@ -6,6 +6,7 @@
     "deploy": "vercel --prod",
     "populate-training": "node scripts/populate-training.js",
     "auto-train": "node scripts/auto-train.js",
+    "check-data": "node scripts/check-training-data.js",
     "dev": "vercel dev"
   },
   "dependencies": {
