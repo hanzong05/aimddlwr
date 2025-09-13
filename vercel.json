@@ -15,12 +15,20 @@
       "destination": "/api/auth?action=register"
     },
     {
-      "source": "/api/ai/train(.*)",
-      "destination": "/api/ai/training?type=regular$1"
+      "source": "/api/ai/train\\?(.*)",
+      "destination": "/api/ai/training?type=regular&$1"
     },
     {
-      "source": "/api/ai/advanced-train(.*)",
-      "destination": "/api/ai/training?type=advanced$1"
+      "source": "/api/ai/train",
+      "destination": "/api/ai/training?type=regular"
+    },
+    {
+      "source": "/api/ai/advanced-train\\?(.*)",
+      "destination": "/api/ai/training?type=advanced&$1"
+    },
+    {
+      "source": "/api/ai/advanced-train",
+      "destination": "/api/ai/training?type=advanced"
     },
     {
       "source": "/api/ai/brain-memory(.*)",

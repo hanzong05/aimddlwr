@@ -368,7 +368,12 @@ async function handleTools(req, res, userId) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const { action } = req.query;
   const { tool, params = {} } = req.body;
+  
+  if (action === 'execute' && !tool) {
+    return res.status(400).json({ error: 'Tool name required in body for execute action' });
+  }
 
   try {
     let result;

@@ -27,6 +27,8 @@ export default async function handler(req, res) {
 
     // Get endpoint from query parameter (set by vercel.json rewrite)
     const { endpoint } = req.query;
+    
+    console.log(`Learning API called with endpoint: ${endpoint}, query:`, req.query);
 
     // Route to appropriate handler
     switch (endpoint) {
@@ -38,8 +40,16 @@ export default async function handler(req, res) {
         return await handleFeedback(req, res, userId);
       case 'health':
         return await handleHealth(req, res, userId);
+      case undefined:
+      case null:
+        // Default to analytics if no endpoint specified
+        return await handleAnalytics(req, res, userId);
       default:
-        return res.status(404).json({ error: 'Learning endpoint not found' });
+        return res.status(404).json({ 
+          error: 'Learning endpoint not found',
+          availableEndpoints: ['analytics', 'patterns', 'feedback', 'health'],
+          received: endpoint
+        });
     }
 
   } catch (error) {
