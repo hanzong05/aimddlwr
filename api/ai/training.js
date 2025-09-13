@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   try {
     console.log(`Training API called - Method: ${req.method}, URL: ${req.url}, Query:`, req.query);
-    
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('Training API: Missing authorization header');
@@ -26,17 +26,36 @@ export default async function handler(req, res) {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
-    
+
     console.log(`Training API: Authenticated user ${userId}`);
 
-    const { type = 'regular' } = req.query; // regular or advanced
-    console.log(`Training API: Type determined as '${type}'`);
+    const { type = 'regular', action } = req.query; // regular, advanced, auto-questions, scheduler
+    console.log(`Training API: Type determined as '${type}', action: '${action}'`);
+
+    // Handle auto-questions functionality
+    if (type === 'auto-questions' || action === 'auto-questions') {
+      if (req.method === 'GET') {
+        const { action: subAction = 'generate', count = 5, category = 'programming' } = req.query;
+        if (subAction === 'generate') {
+          return await generateAutoQuestions(req, res, userId, count, category);
+        } else if (subAction === 'status') {
+          return await getAutoQuestionStatus(req, res, userId);
+        }
+      } else if (req.method === 'POST') {
+        return await startAutomaticQuestionGeneration(req, res, userId);
+      }
+    }
+
+    // Handle scheduler functionality
+    if (type === 'scheduler' || action === 'scheduler') {
+      return await runAutoScheduler(req, res);
+    }
 
     if (req.method === 'POST') {
       console.log(`Training API: Starting ${type} training for user ${userId}`);
       console.log('Training API: Request body:', req.body);
-      
-      return type === 'advanced' 
+
+      return type === 'advanced'
         ? await startAdvancedTraining(req, res, userId)
         : await startTraining(req, res, userId);
     } else if (req.method === 'GET') {
@@ -45,7 +64,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Training error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Training request failed',
       details: error.message,
       stack: error.stack
@@ -465,9 +484,284 @@ async function createSampleTrainingData(userId) {
   await supabase.from('training_data').insert(records);
 }
 
+// AUTO-QUESTIONS FUNCTIONALITY
+
+async function generateAutoQuestions(req, res, userId, count, category) {
+  try {
+    console.log(`Generating ${count} auto questions for category: ${category}`);
+
+    const questions = await getQuestionsByCategory(category, parseInt(count));
+
+    if (!questions || questions.length === 0) {
+      return res.status(500).json({ error: 'Failed to generate questions' });
+    }
+
+    // Store questions as training data
+    const trainingRecords = questions.map(q => ({
+      user_id: userId,
+      input: q.question,
+      output: q.answer,
+      category: q.category || category,
+      quality_score: getDifficultyScore(q.difficulty),
+      tags: q.tags || [category, 'auto-generated'],
+      metadata: {
+        source: q.source || 'auto-generator',
+        auto_generated: true,
+        generated_at: new Date().toISOString()
+      },
+      auto_collected: true,
+      used_in_training: false,
+      created_at: new Date().toISOString()
+    }));
+
+    const { data: insertedData, error: insertError } = await supabase
+      .from('training_data')
+      .insert(trainingRecords)
+      .select();
+
+    if (insertError) {
+      console.error('Error inserting training data:', insertError);
+      throw insertError;
+    }
+
+    // Update generation stats (gracefully handle missing table)
+    try {
+      await updateAutoQuestionStats(userId, questions.length, category);
+    } catch (statsError) {
+      console.log('Stats update failed:', statsError.message);
+    }
+
+    res.json({
+      success: true,
+      generated: questions.length,
+      category: category,
+      questions: questions.map(q => ({
+        question: q.question,
+        answer: q.answer.substring(0, 100) + '...',
+        category: q.category,
+        source: q.source
+      })),
+      stored: insertedData.length
+    });
+
+  } catch (error) {
+    console.error('Auto question generation failed:', error);
+    res.status(500).json({ error: 'Failed to generate auto questions' });
+  }
+}
+
+async function getQuestionsByCategory(category, count) {
+  const questionPools = {
+    programming: [
+      {
+        question: "What is the difference between let and var in JavaScript?",
+        answer: "The main differences are scope, hoisting behavior, and redeclaration rules:\n\n**var:**\n- Function-scoped\n- Can be redeclared\n- Hoisted and initialized with undefined\n\n**let:**\n- Block-scoped\n- Cannot be redeclared in same scope\n- Hoisted but not initialized (temporal dead zone)\n\nExample:\n```javascript\nfunction example() {\n  var x = 1;\n  let y = 2;\n  \n  if (true) {\n    var x = 3; // Same variable\n    let y = 4; // Different variable\n    console.log(x, y); // 3, 4\n  }\n  \n  console.log(x, y); // 3, 2\n}\n```",
+        category: "javascript",
+        difficulty: "intermediate",
+        tags: ["javascript", "variables", "scope"],
+        source: "JavaScript Fundamentals"
+      },
+      {
+        question: "How do you handle promises in JavaScript?",
+        answer: "You can handle promises using .then()/.catch() or async/await:\n\n**Using .then()/.catch():**\n```javascript\nfetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error));\n```\n\n**Using async/await:**\n```javascript\nasync function fetchData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n```\n\nAsync/await makes code more readable and easier to debug.",
+        category: "javascript",
+        difficulty: "intermediate",
+        tags: ["javascript", "promises", "async", "await"],
+        source: "JavaScript Async Programming"
+      }
+    ],
+    webdev: [
+      {
+        question: "What is responsive web design?",
+        answer: "Responsive web design ensures websites work well on all devices:\n\n**Key Principles:**\n- Fluid grids using percentages\n- Flexible images that scale\n- CSS media queries for different screen sizes\n\n**Example:**\n```css\n/* Mobile first */\n.container {\n  width: 100%;\n  padding: 1rem;\n}\n\n/* Tablet */\n@media (min-width: 768px) {\n  .container {\n    width: 750px;\n    margin: 0 auto;\n  }\n}\n\n/* Desktop */\n@media (min-width: 1024px) {\n  .container {\n    width: 1000px;\n  }\n}\n```",
+        category: "css",
+        difficulty: "beginner",
+        tags: ["css", "responsive", "media-queries"],
+        source: "CSS Responsive Design"
+      }
+    ]
+  };
+
+  const categoryQuestions = questionPools[category] || questionPools.programming;
+  const shuffled = [...categoryQuestions].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function getDifficultyScore(difficulty) {
+  const scores = {
+    'beginner': 3.2,
+    'intermediate': 4.0,
+    'advanced': 4.5,
+    'expert': 4.8
+  };
+  return scores[difficulty] || 3.5;
+}
+
+async function updateAutoQuestionStats(userId, count, category) {
+  try {
+    await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: userId,
+        last_auto_generation: new Date().toISOString(),
+        auto_questions_generated: count,
+        updated_at: new Date().toISOString()
+      });
+  } catch (error) {
+    console.error('Error updating auto question stats:', error);
+    throw error;
+  }
+}
+
+async function getAutoQuestionStatus(req, res, userId) {
+  try {
+    const { data: preferences } = await supabase
+      .from('user_preferences')
+      .select('auto_questions_generated, last_auto_generation')
+      .eq('user_id', userId)
+      .single();
+
+    const { data: recentQuestions } = await supabase
+      .from('training_data')
+      .select('category, created_at')
+      .eq('user_id', userId)
+      .eq('auto_collected', true)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    res.json({
+      success: true,
+      stats: {
+        total_generated: preferences?.auto_questions_generated || 0,
+        last_generation: preferences?.last_auto_generation || null,
+        recent_questions: recentQuestions || []
+      }
+    });
+  } catch (error) {
+    console.error('Error getting auto question status:', error);
+    res.status(500).json({ error: 'Failed to get auto question status' });
+  }
+}
+
+async function startAutomaticQuestionGeneration(req, res, userId) {
+  const { categories = ['programming', 'webdev'], interval_hours = 6, questions_per_batch = 3 } = req.body;
+
+  try {
+    await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: userId,
+        auto_questions_enabled: true,
+        auto_categories: categories,
+        auto_interval_hours: interval_hours,
+        auto_questions_per_batch: questions_per_batch,
+        last_auto_run: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    res.json({
+      success: true,
+      message: 'Automatic question generation enabled',
+      settings: { categories, interval_hours, questions_per_batch }
+    });
+  } catch (error) {
+    console.error('Error starting automatic generation:', error);
+    res.status(500).json({ error: 'Failed to start automatic generation' });
+  }
+}
+
+async function runAutoScheduler(req, res) {
+  try {
+    console.log('Auto-scheduler triggered via training endpoint');
+
+    const { data: users } = await supabase
+      .from('user_preferences')
+      .select('user_id, auto_categories, auto_interval_hours, auto_questions_per_batch, last_auto_run')
+      .eq('auto_questions_enabled', true);
+
+    if (!users || users.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No users with auto-generation enabled',
+        processed: 0
+      });
+    }
+
+    const results = [];
+    const now = new Date();
+
+    for (const user of users) {
+      try {
+        const lastRun = user.last_auto_run ? new Date(user.last_auto_run) : null;
+        const hoursSinceLastRun = lastRun ? (now - lastRun) / (1000 * 60 * 60) : 999;
+
+        if (hoursSinceLastRun >= (user.auto_interval_hours || 6)) {
+          const categories = user.auto_categories || ['programming'];
+          let totalGenerated = 0;
+
+          for (const category of categories) {
+            const questions = await getQuestionsByCategory(category, user.auto_questions_per_batch || 3);
+            if (questions && questions.length > 0) {
+              const trainingRecords = questions.map(q => ({
+                user_id: user.user_id,
+                input: q.question,
+                output: q.answer,
+                category: q.category || category,
+                quality_score: getDifficultyScore(q.difficulty),
+                tags: q.tags || [category, 'auto-scheduled'],
+                metadata: { auto_generated: true, scheduled: true },
+                auto_collected: true,
+                used_in_training: false,
+                created_at: new Date().toISOString()
+              }));
+
+              const { data: inserted } = await supabase
+                .from('training_data')
+                .insert(trainingRecords)
+                .select();
+
+              totalGenerated += inserted?.length || 0;
+            }
+          }
+
+          await supabase
+            .from('user_preferences')
+            .update({ last_auto_run: now.toISOString() })
+            .eq('user_id', user.user_id);
+
+          results.push({
+            user_id: user.user_id,
+            generated: totalGenerated,
+            status: 'success'
+          });
+        }
+      } catch (userError) {
+        console.error(`Error processing user ${user.user_id}:`, userError);
+        results.push({
+          user_id: user.user_id,
+          generated: 0,
+          status: 'error',
+          error: userError.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      processed: users.length,
+      results: results,
+      timestamp: now.toISOString()
+    });
+
+  } catch (error) {
+    console.error('Auto-scheduler error:', error);
+    res.status(500).json({ error: 'Auto-scheduler failed' });
+  }
+}
+
 async function createAdvancedSampleData(userId) {
   console.log('Creating advanced sample data for user:', userId);
-  
+
   // Use the same comprehensive sample data as regular training
   const sampleData = [
     {

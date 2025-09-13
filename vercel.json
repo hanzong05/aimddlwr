@@ -64,11 +64,11 @@
     },
     {
       "source": "/api/ai/auto-questions",
-      "destination": "/api/ai/auto-questions"
+      "destination": "/api/ai/training?type=auto-questions"
     },
     {
       "source": "/api/ai/auto-scheduler",
-      "destination": "/api/ai/auto-scheduler"
+      "destination": "/api/ai/training?type=scheduler"
     }
   ],
   "headers": [
