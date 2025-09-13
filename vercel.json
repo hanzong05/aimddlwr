@@ -61,6 +61,14 @@
     {
       "source": "/api/learning/learning(.*)",
       "destination": "/api/learning$1"
+    },
+    {
+      "source": "/api/ai/auto-questions",
+      "destination": "/api/ai/auto-questions"
+    },
+    {
+      "source": "/api/ai/auto-scheduler",
+      "destination": "/api/ai/auto-scheduler"
     }
   ],
   "headers": [
