@@ -55,44 +55,100 @@ async function searchMemories(req, res, userId) {
   } = req.query;
 
   try {
-    let searchQuery = supabase
-      .from('brain_memories')
-      .select(`
-        *,
-        ${include_context ? 'context_connections!context_connections_source_id_fkey(*)' : ''}
-      `)
-      .eq('user_id', userId)
-      .gte('importance', min_importance)
-      .order('importance', { ascending: false })
-      .limit(limit);
-
-    if (type) {
-      searchQuery = searchQuery.eq('type', type);
-    }
-
-    if (category) {
-      searchQuery = searchQuery.eq('category', category);
-    }
-
-    if (query) {
-      // Text-based search for now (can be enhanced with vector search)
-      searchQuery = searchQuery.or(`content.ilike.%${query}%,summary.ilike.%${query}%`);
-    }
-
-    const { data: memories, error } = await searchQuery;
-
-    if (error) throw error;
-
-    // Update access count for retrieved memories
-    if (memories.length > 0) {
-      const memoryIds = memories.map(m => m.id);
-      await supabase
+    // Check if brain_memories table exists, fallback to training_data
+    let memories = [];
+    
+    try {
+      let searchQuery = supabase
         .from('brain_memories')
-        .update({ 
-          access_count: supabase.raw('access_count + 1'),
-          last_accessed: new Date().toISOString()
-        })
-        .in('id', memoryIds);
+        .select(`
+          *,
+          ${include_context ? 'context_connections!context_connections_source_id_fkey(*)' : ''}
+        `)
+        .eq('user_id', userId)
+        .gte('importance', min_importance)
+        .order('importance', { ascending: false })
+        .limit(limit);
+
+      if (type) {
+        searchQuery = searchQuery.eq('type', type);
+      }
+
+      if (category) {
+        searchQuery = searchQuery.eq('category', category);
+      }
+
+      if (query) {
+        searchQuery = searchQuery.or(`content.ilike.%${query}%,summary.ilike.%${query}%`);
+      }
+
+      const { data: brainMemories, error: memoryError } = await searchQuery;
+      
+      if (memoryError && memoryError.code === 'PGRST116') {
+        // Table doesn't exist, fallback to training data
+        throw new Error('brain_memories table not found');
+      } else if (memoryError) {
+        throw memoryError;
+      }
+      
+      memories = brainMemories || [];
+      
+    } catch (fallbackError) {
+      // Fallback to training_data table as memory substitute
+      console.log('Brain memories table not available, using training data as fallback');
+      
+      let fallbackQuery = supabase
+        .from('training_data')
+        .select('*')
+        .eq('user_id', userId)
+        .order('quality_score', { ascending: false })
+        .limit(limit);
+
+      if (query) {
+        fallbackQuery = fallbackQuery.or(`input.ilike.%${query}%,output.ilike.%${query}%,category.ilike.%${query}%`);
+      }
+
+      if (category) {
+        fallbackQuery = fallbackQuery.eq('category', category);
+      }
+
+      const { data: fallbackMemories, error: fallbackErr } = await fallbackQuery;
+      
+      if (fallbackErr) throw fallbackErr;
+      
+      // Transform training data to memory format
+      memories = (fallbackMemories || []).map(item => ({
+        id: item.id,
+        type: 'training',
+        content: item.output,
+        summary: item.input,
+        importance: item.quality_score / 5.0, // Convert 0-5 to 0-1
+        confidence: 0.8,
+        category: item.category,
+        tags: item.tags || [],
+        context: item.metadata || {},
+        access_count: 0,
+        created_at: item.created_at
+      }));
+    }
+
+    const error = null; // No error if we got here
+
+    // Update access count for retrieved memories (only if using actual brain_memories table)
+    if (memories.length > 0 && memories[0].type !== 'training') {
+      try {
+        const memoryIds = memories.map(m => m.id);
+        await supabase
+          .from('brain_memories')
+          .update({ 
+            access_count: supabase.raw('access_count + 1'),
+            last_accessed: new Date().toISOString()
+          })
+          .in('id', memoryIds);
+      } catch (updateError) {
+        console.log('Could not update access count:', updateError);
+        // Ignore update errors for fallback data
+      }
     }
 
     res.json({
@@ -139,28 +195,81 @@ async function createMemory(req, res, userId) {
       embedding = await generateEmbedding(content + ' ' + (summary || ''));
     }
 
-    const { data: memory, error } = await supabase
-      .from('brain_memories')
-      .insert({
-        user_id: userId,
-        type,
-        content,
-        summary: summary || content.substring(0, 200) + '...',
-        importance,
-        confidence,
-        category,
-        tags,
-        context,
-        source_id,
-        source_type,
-        embedding,
-        expires_at,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    let memory;
+    try {
+      const { data: memoryData, error } = await supabase
+        .from('brain_memories')
+        .insert({
+          user_id: userId,
+          type,
+          content,
+          summary: summary || content.substring(0, 200) + '...',
+          importance,
+          confidence,
+          category,
+          tags,
+          context,
+          source_id,
+          source_type,
+          embedding,
+          expires_at,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error && error.code === 'PGRST116') {
+        // Table doesn't exist, fallback to training_data
+        throw new Error('brain_memories table not found');
+      } else if (error) {
+        throw error;
+      }
+      
+      memory = memoryData;
+      
+    } catch (fallbackError) {
+      // Fallback: Store as training data
+      console.log('Brain memories table not available, storing as training data');
+      
+      const { data: trainingData, error: trainingError } = await supabase
+        .from('training_data')
+        .insert({
+          user_id: userId,
+          input: summary || content.substring(0, 200),
+          output: content,
+          category: category,
+          quality_score: Math.min(5.0, Math.max(1.0, importance * 5)), // Convert 0-1 to 1-5
+          tags: tags,
+          metadata: {
+            ...context,
+            original_type: type,
+            source_id,
+            source_type,
+            stored_as_memory: true
+          },
+          auto_collected: false,
+          used_in_training: false,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (trainingError) throw trainingError;
+      
+      // Transform back to memory format for response
+      memory = {
+        id: trainingData.id,
+        type: 'training',
+        content: trainingData.output,
+        summary: trainingData.input,
+        importance: trainingData.quality_score / 5.0,
+        confidence: 0.8,
+        category: trainingData.category,
+        tags: trainingData.tags || [],
+        context: trainingData.metadata || {},
+        created_at: trainingData.created_at
+      };
+    }
 
     // Create context connections if provided
     if (context.related_memories) {
