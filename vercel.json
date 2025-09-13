@@ -35,8 +35,8 @@
       "destination": "/api/ai/brain?type=tools"
     },
     {
-      "source": "/api/ai/auto-learn",
-      "destination": "/api/ai/learn"
+      "source": "/api/ai/auto-learn(.*)",
+      "destination": "/api/ai/learn$1"
     },
     {
       "source": "/api/data/training",
