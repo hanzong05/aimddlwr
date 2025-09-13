@@ -7,6 +7,42 @@
   },
   "rewrites": [
     {
+      "source": "/api/auth/login",
+      "destination": "/api/auth?action=login"
+    },
+    {
+      "source": "/api/auth/register", 
+      "destination": "/api/auth?action=register"
+    },
+    {
+      "source": "/api/ai/train",
+      "destination": "/api/ai/training?type=regular"
+    },
+    {
+      "source": "/api/ai/advanced-train",
+      "destination": "/api/ai/training?type=advanced"
+    },
+    {
+      "source": "/api/ai/brain-memory",
+      "destination": "/api/ai/brain?type=memory"
+    },
+    {
+      "source": "/api/ai/brain-chat",
+      "destination": "/api/ai/brain?type=chat"
+    },
+    {
+      "source": "/api/ai/brain-tools",
+      "destination": "/api/ai/brain?type=tools"
+    },
+    {
+      "source": "/api/ai/auto-learn",
+      "destination": "/api/ai/learn"
+    },
+    {
+      "source": "/api/data/training",
+      "destination": "/api/data"
+    },
+    {
       "source": "/api/learning/analytics",
       "destination": "/api/learning?endpoint=analytics"
     },
@@ -21,26 +57,6 @@
     {
       "source": "/api/learning/health",
       "destination": "/api/learning?endpoint=health"
-    },
-    {
-      "source": "/api/proxy/learning/analytics",
-      "destination": "/api/learning?endpoint=analytics"
-    },
-    {
-      "source": "/api/proxy/learning/patterns",
-      "destination": "/api/learning?endpoint=patterns"
-    },
-    {
-      "source": "/api/proxy/learning/feedback",
-      "destination": "/api/learning?endpoint=feedback"
-    },
-    {
-      "source": "/api/proxy/learning/health",
-      "destination": "/api/learning?endpoint=health"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
     }
   ],
   "headers": [
