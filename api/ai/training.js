@@ -45,7 +45,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Training error:', error);
-    res.status(500).json({ error: 'Training request failed' });
+    res.status(500).json({ 
+      error: 'Training request failed',
+      details: error.message,
+      stack: error.stack
+    });
   }
 }
 
@@ -128,21 +132,22 @@ async function startTraining(req, res, userId) {
 }
 
 async function startAdvancedTraining(req, res, userId) {
-  console.log('startAdvancedTraining called for user:', userId);
-  console.log('Request body:', req.body);
-  
-  const { 
-    modelType = 'advanced',
-    epochs = 10, 
-    learningRate = 0.0001, 
-    batchSize = 32,
-    modelName = `Advanced Model ${Date.now()}`,
-    specialization = 'general',
-    useMemorySystem = true,
-    useAutoLearning = true
-  } = req.body;
-  
-  console.log('Advanced training config:', { modelType, epochs, learningRate, batchSize, modelName, specialization });
+  try {
+    console.log('startAdvancedTraining called for user:', userId);
+    console.log('Request body:', req.body);
+    
+    const { 
+      modelType = 'advanced',
+      epochs = 10, 
+      learningRate = 0.0001, 
+      batchSize = 32,
+      modelName = `Advanced Model ${Date.now()}`,
+      specialization = 'general',
+      useMemorySystem = true,
+      useAutoLearning = true
+    } = req.body;
+    
+    console.log('Advanced training config:', { modelType, epochs, learningRate, batchSize, modelName, specialization });
 
   const { data: trainingData, error: dataError } = await supabase
     .from('training_data')
@@ -221,13 +226,23 @@ async function startAdvancedTraining(req, res, userId) {
     epochs, batchSize, learningRate, modelType, specialization, useMemorySystem, useAutoLearning
   }));
 
-  res.json({
-    success: true,
-    jobId: job.id,
-    trainingDataCount: trainingData.length,
-    modelType,
-    status: 'started'
-  });
+    res.json({
+      success: true,
+      jobId: job.id,
+      trainingDataCount: trainingData.length,
+      modelType,
+      status: 'started'
+    });
+    
+  } catch (error) {
+    console.error('Advanced training start failed:', error);
+    return res.status(400).json({ 
+      error: 'Failed to start advanced training',
+      details: error.message,
+      userId: userId,
+      requestBody: req.body
+    });
+  }
 }
 
 async function processTraining(jobId, userId, trainingData, modelName, config) {
