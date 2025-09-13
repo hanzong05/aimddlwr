@@ -346,6 +346,24 @@ function generateBrainResponse(message, context, model) {
 
 // TOOLS FUNCTIONS
 async function handleTools(req, res, userId) {
+  if (req.method === 'GET') {
+    // Handle GET requests for listing tools
+    const { action } = req.query;
+    
+    if (action === 'list') {
+      return res.json({
+        success: true,
+        tools: [
+          { name: 'analyze-conversation', description: 'Analyze conversation patterns' },
+          { name: 'optimize-memory', description: 'Optimize memory usage' },
+          { name: 'generate-insights', description: 'Generate insights from data' }
+        ]
+      });
+    }
+    
+    return res.status(400).json({ error: 'Invalid action for GET request' });
+  }
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

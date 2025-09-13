@@ -15,24 +15,24 @@
       "destination": "/api/auth?action=register"
     },
     {
-      "source": "/api/ai/train",
-      "destination": "/api/ai/training?type=regular"
+      "source": "/api/ai/train(.*)",
+      "destination": "/api/ai/training?type=regular$1"
     },
     {
-      "source": "/api/ai/advanced-train",
-      "destination": "/api/ai/training?type=advanced"
+      "source": "/api/ai/advanced-train(.*)",
+      "destination": "/api/ai/training?type=advanced$1"
     },
     {
-      "source": "/api/ai/brain-memory",
-      "destination": "/api/ai/brain?type=memory"
+      "source": "/api/ai/brain-memory(.*)",
+      "destination": "/api/ai/brain?type=memory$1"
     },
     {
-      "source": "/api/ai/brain-chat",
-      "destination": "/api/ai/brain?type=chat"
+      "source": "/api/ai/brain-chat(.*)",
+      "destination": "/api/ai/brain?type=chat$1"
     },
     {
-      "source": "/api/ai/brain-tools",
-      "destination": "/api/ai/brain?type=tools"
+      "source": "/api/ai/brain-tools(.*)",
+      "destination": "/api/ai/brain?type=tools$1"
     },
     {
       "source": "/api/ai/auto-learn(.*)",
@@ -57,6 +57,10 @@
     {
       "source": "/api/learning/health",
       "destination": "/api/learning?endpoint=health"
+    },
+    {
+      "source": "/api/learning/learning(.*)",
+      "destination": "/api/learning$1"
     }
   ],
   "headers": [
